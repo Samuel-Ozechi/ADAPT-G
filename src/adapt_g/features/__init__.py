@@ -1,2 +1,4 @@
-# src/adapt_g/features/__init__.py
-"""Leakage-safe feature transformations (AG-004)."""
+from adapt_g.features.preprocessing import Preprocessor, PreprocessorConfig
+from adapt_g.features.rolling import RollingAggregator
+
+__all__ = ["Preprocessor", "PreprocessorConfig", "RollingAggregator"]
