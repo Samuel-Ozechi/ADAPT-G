@@ -1,0 +1,7 @@
+evaluation:
+  metrics:
+    ranking: [pr_auc, roc_auc]
+    operational: [precision, recall, f1, fpr, fn]
+    calibration: [brier, log_loss]
+  threshold_selection: validation_only
+  ece_bins: 10

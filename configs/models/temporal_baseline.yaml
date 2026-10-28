@@ -1,0 +1,4 @@
+model:
+  name: temporal_baseline
+  type: temporal
+  # Placeholder; concrete hyperparameters set in AG-007.

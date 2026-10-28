@@ -1,0 +1,4 @@
+model:
+  name: tabular_baseline
+  type: tabular
+  # Placeholder; concrete hyperparameters set in AG-006.

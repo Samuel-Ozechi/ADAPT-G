@@ -1,0 +1,25 @@
+# Base configuration. Data- and model-specific configs merge into this.
+project:
+  name: adapt-g
+  seed: 42
+
+paths:
+  data_raw: data/raw/ieee_cis
+  runs: runs
+
+logging:
+  level: INFO
+  json: true
+
+data:
+  transaction_file: train_transaction.csv
+  identity_file: train_identity.csv
+  id_column: TransactionID
+  target_column: isFraud
+  time_column: TransactionDT
+
+split:
+  # Chronological quantile boundaries on TransactionDT.
+  # train: [0.0, 0.8), val: [0.8, 0.9), test: [0.9, 1.0]
+  train_end_q: 0.8
+  val_end_q: 0.9
