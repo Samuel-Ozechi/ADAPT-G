@@ -30,6 +30,9 @@ def ranking_metrics(y_true: np.ndarray, y_score: np.ndarray) -> dict:
     if len(np.unique(y_true)) < 2:
         return {"pr_auc": float("nan"), "roc_auc": float("nan"),
                 "flag": "single_class_in_fold"}
+    if np.allclose(y_score, y_score[0]):
+        return {"pr_auc": float("nan"), "roc_auc": float("nan"),
+                "flag": "constant_score"}
     return {
         "pr_auc": _safe(average_precision_score, y_true, y_score),
         "roc_auc": _safe(roc_auc_score, y_true, y_score),

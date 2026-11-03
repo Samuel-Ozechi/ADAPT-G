@@ -112,14 +112,23 @@ class Preprocessor:
         if not self._fitted:
             raise RuntimeError("Preprocessor must be fit on training fold first.")
         out = df.copy()
+        missing_features: dict[str, pd.Series] = {}
 
         for c in self.cfg.numeric_cols:
             if c not in out.columns:
                 continue
             s = pd.to_numeric(out[c], errors="coerce")
-            out[f"{c}__is_missing"] = s.isna().astype("int8")
+            missing_features[f"{c}__is_missing"] = s.isna().astype("int8")
             filled = s.fillna(self._numeric_medians[c])
             out[c] = (filled - self._numeric_means[c]) / self._numeric_stds[c]
+
+        if missing_features:
+            # Add all indicators in one operation to avoid fragmenting wide frames.
+            out = pd.concat(
+                [out.drop(columns=missing_features.keys(), errors="ignore"),
+                 pd.DataFrame(missing_features, index=out.index)],
+                axis=1,
+            )
 
         for c in self.cfg.categorical_cols:
             if c not in out.columns:

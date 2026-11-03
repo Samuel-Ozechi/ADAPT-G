@@ -11,12 +11,14 @@ requires-python = ">=3.9"
 dependencies = [
     "numpy",
     "pandas",
+    "scikit-learn",
+    "lightgbm>=4.0",
     "PyYAML",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
+    "pytest>=7.4", "pytest-cov>=4.1"
 ]
 
 [tool.setuptools]

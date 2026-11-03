@@ -66,9 +66,10 @@ class RollingAggregator:
     @staticmethod
     def _rolling_count(out: pd.DataFrame, cfg: RollingConfig, w: int) -> pd.Series:
         # Vectorised per-entity window count using groupby + rolling on time.
-        def per_group(g: pd.DataFrame) -> pd.Series:
+        result = np.zeros(len(out), dtype="int32")
+        for positions in out.groupby(cfg.entity_col, sort=False).indices.values():
+            g = out.iloc[positions]
             t = g[cfg.time_col].values
-            ids = g.index.values
             res = np.zeros(len(t), dtype="int32")
             # Two-pointer over sorted times.
             left = 0
@@ -76,16 +77,17 @@ class RollingAggregator:
                 while t[left] <= t[i] - w:
                     left += 1
                 res[i] = i - left  # strictly prior rows within window
-            return pd.Series(res, index=ids)
-        return out.groupby(cfg.entity_col, sort=False, group_keys=False).apply(per_group)
+            result[positions] = res
+        return pd.Series(result, index=out.index)
 
     @staticmethod
     def _rolling_sum(out: pd.DataFrame, cfg: RollingConfig, w: int,
                      amounts: pd.Series) -> pd.Series:
-        def per_group(g: pd.DataFrame) -> pd.Series:
+        result = np.zeros(len(out), dtype=float)
+        for positions in out.groupby(cfg.entity_col, sort=False).indices.values():
+            g = out.iloc[positions]
             t = g[cfg.time_col].values
-            a = amounts.loc[g.index].values
-            ids = g.index.values
+            a = amounts.iloc[positions].values
             res = np.zeros(len(t), dtype=float)
             left = 0
             running = 0.0
@@ -95,5 +97,5 @@ class RollingAggregator:
                     left += 1
                 res[i] = running  # sum of prior rows within window
                 running += a[i]
-            return pd.Series(res, index=ids)
-        return out.groupby(cfg.entity_col, sort=False, group_keys=False).apply(per_group)
+            result[positions] = res
+        return pd.Series(result, index=out.index)
