@@ -1,3 +1,8 @@
+import numpy as np
+import pandas as pd
+
+from adapt_g.models.baselines import MajorityBaseline
+
 def test_majority_baseline_predicts_majority_class():
     # Imbalanced: majority is 0.
     X = pd.DataFrame({"a": [0.0] * 80 + [1.0] * 20})
@@ -5,14 +10,14 @@ def test_majority_baseline_predicts_majority_class():
     m = MajorityBaseline().fit(X, y)
     s = m.predict_score(X)
     assert m.majority_class == 0
-    assert np.allclose(s, 0.0)
+    assert np.allclose(s, y.mean())
 
     # Balanced-toward-positive: majority is 1.
     y2 = pd.Series([0] * 30 + [1] * 70)
     m2 = MajorityBaseline().fit(X, y2)
     s2 = m2.predict_score(X)
     assert m2.majority_class == 1
-    assert np.allclose(s2, 1.0)
+    assert np.allclose(s2, y2.mean())
 
 
 def test_majority_baseline_flagged_by_harness():

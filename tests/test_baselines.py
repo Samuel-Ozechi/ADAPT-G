@@ -1,9 +1,11 @@
 import json
+import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.exceptions import ConvergenceWarning
 
 from adapt_g.models.baselines import (
     MajorityBaseline, RuleBaseline, LogRegBaseline, LightGBMBaseline,
@@ -38,7 +40,9 @@ def test_rule_baseline_produces_binary_scores():
 
 def test_logreg_predicts_probabilities():
     X, y = _xy()
-    m = LogRegBaseline(seed=0).fit(X, y)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ConvergenceWarning)
+        m = LogRegBaseline(seed=0).fit(X, y)
     s = m.predict_score(X)
     assert (s >= 0).all() and (s <= 1).all()
     assert m.n_parameters() > 0
@@ -54,6 +58,19 @@ def test_lightgbm_tunes_on_validation():
     s = m.predict_score(X_va)
     assert (s >= 0).all() and (s <= 1).all()
     assert m.n_parameters() > 0
+
+
+def test_lightgbm_accepts_pandas_string_columns():
+    X, y = _xy(n=120)
+    X = X.astype({"ProductCD": "string", "card4": "string"})
+    X_tr, y_tr = X.iloc[:90], y.iloc[:90]
+    X_va, y_va = X.iloc[90:], y.iloc[90:]
+
+    m = LightGBMBaseline(seed=0, grid_size=1).fit(X_tr, y_tr, X_va, y_va)
+
+    scores = m.predict_score(X_va)
+    assert len(scores) == len(X_va)
+    assert np.isfinite(scores).all()
 
 
 def test_lightgbm_falls_back_without_validation():

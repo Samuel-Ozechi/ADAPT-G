@@ -10,10 +10,8 @@ class MajorityBaseline:
 
     Semantics:
     - Determine the majority class c* from the training fold.
-    - Predict P(y = 1 | majority-class strategy) as:
-        - p_pos if c* == 1  (always predict positive)
-        - 1 - p_pos if c* == 0  (always predict negative -> score for positive = 0)
-      where p_pos = y.mean() on train.
+        - Return the training positive rate p_pos as a constant score. The
+            majority_class attribute records the corresponding hard majority class.
 
     This produces a *constant* score, which is the honest expression of
     "no information beyond the class prior." Ranking metrics are
@@ -29,8 +27,9 @@ class MajorityBaseline:
     def fit(self, X, y):
         self.p_pos = float(y.mean())
         self.majority_class = 1 if self.p_pos >= 0.5 else 0
-        # Score for the "positive" class under always-predict-majority.
-        self.constant_score = 1.0 if self.majority_class == 1 else 0.0
+        # No ranking information: use the empirical class prior as a
+        # probability estimate, matching the documented floor baseline.
+        self.constant_score = self.p_pos
         return self
 
     def predict_score(self, X):
@@ -56,18 +55,26 @@ class RuleBaseline:
         self.product_col = product_col
         self.product_value = product_value
         self.amount_threshold: float = 0.0
+        self._has_amount = False
+        self._has_product = False
 
     def fit(self, X: pd.DataFrame, y: pd.Series) -> "RuleBaseline":
         # Preprocessor has already scaled TransactionAmt. Use the raw column if
         # available; otherwise use the 99th percentile of the scaled column.
-        if self.amount_col in X.columns:
+        self._has_amount = self.amount_col in X.columns
+        self._has_product = self.product_col in X.columns
+        if self._has_amount:
             self.amount_threshold = float(X[self.amount_col].quantile(0.99))
         else:
             self.amount_threshold = 1.0
         return self
 
     def predict_score(self, X: pd.DataFrame) -> np.ndarray:
+        if not self._has_amount or self.amount_col not in X.columns:
+            return np.zeros(len(X), dtype=float)
         cond_amt = X[self.amount_col] > self.amount_threshold
+        if not self._has_product or self.product_col not in X.columns:
+            return np.zeros(len(X), dtype=float)
         cond_prod = X[self.product_col] == self.product_value
         return (cond_amt & cond_prod).astype(float).to_numpy()
 

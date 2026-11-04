@@ -14,6 +14,7 @@ import pytest
 from adapt_g.data.splits import chronological_split
 from adapt_g.features.preprocessing import Preprocessor, PreprocessorConfig
 from adapt_g.features.rolling import RollingAggregator, RollingConfig
+from adapt_g.features.tabular import build_tabular_folds
 
 
 def make_txn(n: int = 200, seed: int = 0) -> pd.DataFrame:
@@ -42,7 +43,9 @@ def test_no_future_influence_on_features():
     truncated = agg.fit_transform(half)
 
     cols = [c for c in full.columns if c.startswith("prior_")]
-    merged = full.merge(truncated[["TransactionID"] + cols],
+    # Compare only transactions retained in the truncated fixture.
+    merged = full[full["TransactionID"].isin(truncated["TransactionID"])].merge(
+        truncated[["TransactionID"] + cols],
                         on="TransactionID", suffixes=("", "_trunc"))
     for c in cols:
         a = merged[c].fillna(-1).values
@@ -73,6 +76,31 @@ def test_rolling_aggregates_exclude_current_row():
     # Rows 1 and 2 share time=100, so neither sees the other in a strict-< window.
     assert out.loc[0, "prior_count_86400s"] != out.loc[0, "prior_count_86400s"]  # NaN
     assert out.loc[1, "prior_count_86400s"] != out.loc[1, "prior_count_86400s"]  # NaN
+    assert out.loc[2, "prior_count_86400s"] == 2
+    assert out.loc[2, "prior_amt_sum_86400s"] == 30.0
+
+
+def test_tabular_validation_history_includes_prior_training_transactions():
+    n = 10
+    txn = pd.DataFrame({
+        "TransactionID": np.arange(n),
+        "isFraud": [0, 1] * 5,
+        "TransactionDT": np.arange(n) * 10,
+        "TransactionAmt": np.arange(1, n + 1, dtype=float),
+        "ProductCD": ["W"] * n,
+        "card1": [7] * n,
+    })
+    ident = pd.DataFrame({"TransactionID": np.arange(n)})
+
+    folds = build_tabular_folds(
+        txn, ident, train_end_q=0.6, val_end_q=0.8,
+        rolling_windows=(86400,),
+    )
+
+    # Six training rows precede the first validation transaction for this entity.
+    assert folds.val_ids.iloc[0] == 6
+    assert folds.X_val.iloc[0]["prior_count"] == 6
+    assert folds.X_val.iloc[0]["prior_amt_sum"] == 21.0
 
 
 def test_preprocessor_statistics_invariant_to_val_test():

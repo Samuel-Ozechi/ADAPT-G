@@ -4,6 +4,24 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scripts.train_tabular import _load_cli_config
+
+
+def test_repeated_config_arguments_are_deep_merged(tmp_path):
+    base = tmp_path / "base.yaml"
+    base.write_text("project: {name: adapt-g, seed: 42}\npaths: {runs: runs}\n")
+    overlay = tmp_path / "overlay.yaml"
+    overlay.write_text("project: {seed: 0}\n")
+
+    cfg = _load_cli_config([
+        "--config", str(base), "--config", str(overlay),
+    ])
+
+    assert cfg == {
+        "project": {"name": "adapt-g", "seed": 0},
+        "paths": {"runs": "runs"},
+    }
+
 
 def test_driver_produces_frozen_reference(tmp_path):
     # Point runs dir to tmp; raw data absent -> synthetic fixture used.

@@ -1,0 +1,17 @@
+                                target transaction (dt_t)
+                                        │
+                                        ▼
+                              ┌─────────────────┐
+                              │   card:<card1>  │ ◄── root of BFS
+                              └────────┬────────┘
+                                       │ card_card (last_seen_dt < dt_t)
+                                       ▼
+                              ┌─────────────────┐
+                              │  card:<other>   │
+                              └────┬───────┬────┘
+                                   │       │
+                          card_addr│       │card_device
+                                   ▼       ▼
+                            ┌──────────┐ ┌──────────┐
+                            │ addr:<v> │ │device:<v>│
+                            └────┬─────┘ └──────────

@@ -27,7 +27,7 @@ def bootstrap_ci(y_true: np.ndarray, y_score: np.ndarray,
     vals = []
     for _ in range(n_boot):
         idx = rng.integers(0, n, size=n)
-        if len(np.unique(y_true[idx])) < 2:
+        if metric != "brier" and len(np.unique(y_true[idx])) < 2:
             continue
         vals.append(_metric_fn(metric, y_true[idx], y_score[idx]))
     if not vals:

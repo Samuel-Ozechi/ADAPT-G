@@ -55,9 +55,15 @@ def write_report(report: dict, out_dir: Path) -> tuple[Path, Path]:
     md.append("")
     md.append("## Test metrics")
     tm = report["test"]
-    md.append(f"- PR-AUC: {tm['ranking']['pr_auc']:.4f} "
-              f"(95% CI {report['test_bootstrap_ci']['pr_auc']['ci_low']:.4f}–"
-              f"{report['test_bootstrap_ci']['pr_auc']['ci_high']:.4f})")
+    pr_ci = report["test_bootstrap_ci"]["pr_auc"]
+    ci_text = (
+        f"(95% CI {pr_ci['ci_low']:.4f}–{pr_ci['ci_high']:.4f})"
+        if pr_ci["ci_low"] is not None and pr_ci["ci_high"] is not None
+        else f"(95% CI unavailable: {pr_ci['flag']})"
+    )
+    pr_auc = tm["ranking"]["pr_auc"]
+    pr_text = f"{pr_auc:.4f}" if np.isfinite(pr_auc) else "unavailable"
+    md.append(f"- PR-AUC: {pr_text} {ci_text}")
     md.append(f"- ROC-AUC: {tm['ranking']['roc_auc']:.4f}")
     md.append(f"- Precision: {tm['operational']['precision']:.4f}")
     md.append(f"- Recall: {tm['operational']['recall']:.4f}")

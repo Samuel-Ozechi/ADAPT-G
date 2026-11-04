@@ -15,11 +15,16 @@ from adapt_g.seeding import set_seed
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/base.yaml")
+    parser.add_argument(
+        "--config", action="append", default=None,
+        help="YAML config to load; repeat to deep-merge configs in order",
+    )
     parser.add_argument("--extra-config", action="append", default=[])
     args = parser.parse_args()
 
-    cfg = load_config(args.config, *args.extra_config)
+    config_paths = args.config or ["configs/base.yaml"]
+    config_paths.extend(args.extra_config)
+    cfg = load_config(*config_paths)
     seed = int(cfg["project"]["seed"])
     runs_dir = Path(cfg["paths"]["runs"])
     run_id = new_run_id()

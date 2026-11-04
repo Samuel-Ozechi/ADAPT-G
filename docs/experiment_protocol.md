@@ -1,4 +1,4 @@
-## Evaluation harness (AG-005)
+## Evaluation harness
 - Thresholds selected on validation only; rule recorded.
 - Test scored once, after design decisions frozen.
 - Every result includes PR-AUC and threshold-dependent error measures.
@@ -13,3 +13,11 @@ python scripts/evaluate.py \
   --test-preds  runs/<id>/test_preds.csv \
   --model-name  <name> \
   --threshold-rule max_f1
+
+## Temporal reference
+- Entity grouping: `card1`.
+- Sequence window: last 32 prior transactions; ties excluded.
+- Model: 2-layer Transformer, d_model=64, 4 heads, d_ff=128, dropout=0.1.
+- Pos-weight BCE; 5 epochs; batch 512; lr 1e-3.
+- Frozen predictions written to `preds/temporal/`.
+- Latency measured on declared device, batch size 512, 3 warmup + 3 timed runs.

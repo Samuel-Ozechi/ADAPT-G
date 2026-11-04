@@ -87,6 +87,13 @@ def test_bootstrap_ci_bounds_contain_point():
     assert out["ci_low"] <= out["point"] <= out["ci_high"]
 
 
+def test_brier_bootstrap_keeps_single_class_resamples():
+    y = np.array([0] * 29 + [1])
+    s = np.linspace(0.01, 0.99, len(y))
+    out = bootstrap_ci(y, s, metric="brier", n_boot=100, seed=3)
+    assert out["n_boot"] == 100
+
+
 def test_uncertainty_metrics_are_valid():
     y, s = _toy()
     rng = np.random.default_rng(1)

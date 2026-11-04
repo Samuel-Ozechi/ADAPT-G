@@ -1,6 +1,7 @@
 """Schema validation for IEEE-CIS transaction and identity tables."""
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 REQUIRED_TRANSACTION_COLS = [
@@ -25,6 +26,10 @@ def validate_schema(txn: pd.DataFrame, identity: pd.DataFrame | None = None) -> 
         raise SchemaError("TransactionDT contains negative values")
     if txn["TransactionID"].isna().any():
         raise SchemaError("TransactionID contains nulls")
+    for col in ("TransactionDT", "TransactionAmt"):
+        values = pd.to_numeric(txn[col], errors="coerce").to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise SchemaError(f"{col} must contain only finite numeric values")
 
     if identity is not None:
         missing_id = [c for c in REQUIRED_IDENTITY_COLS if c not in identity.columns]
@@ -32,6 +37,8 @@ def validate_schema(txn: pd.DataFrame, identity: pd.DataFrame | None = None) -> 
             raise SchemaError(f"Identity table missing columns: {missing_id}")
         if not identity["TransactionID"].is_unique:
             raise SchemaError("TransactionID not unique in identity table")
+        if identity["TransactionID"].isna().any():
+            raise SchemaError("Identity TransactionID contains nulls")
 
 
 def detect_forbidden_columns(

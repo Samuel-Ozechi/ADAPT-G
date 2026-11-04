@@ -47,8 +47,10 @@ def chronological_split(
         raise ValueError("Require 0 < train_end_q < val_end_q < 1")
 
     df = df.sort_values([time_col, id_col], kind="mergesort").reset_index(drop=True)
-    train_max_dt = float(df[time_col].quantile(train_end_q))
-    val_max_dt = float(df[time_col].quantile(val_end_q))
+    # Use observed timestamps rather than interpolated values, ensuring the
+    # stored boundaries are valid dataset times and deterministic at ties.
+    train_max_dt = float(df[time_col].quantile(train_end_q, interpolation="lower"))
+    val_max_dt = float(df[time_col].quantile(val_end_q, interpolation="lower"))
 
     train = df[df[time_col] <= train_max_dt]
     val = df[(df[time_col] > train_max_dt) & (df[time_col] <= val_max_dt)]
@@ -82,8 +84,10 @@ def entity_overlap_report(
     """
     rows: list[EntityOverlap] = []
     for col in entity_cols:
-        if col not in train.columns:
-            continue
+        # Use observed timestamps rather than interpolated values, ensuring the
+        # stored boundaries are valid dataset times and deterministic at ties.
+        train_max_dt = float(df[time_col].quantile(train_end_q, interpolation="lower"))
+        val_max_dt = float(df[time_col].quantile(val_end_q, interpolation="lower"))
         train_ids = set(train[col].dropna().unique())
         val_ids = set(val[col].dropna().unique())
         test_ids = set(test[col].dropna().unique())

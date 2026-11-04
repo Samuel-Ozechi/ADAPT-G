@@ -115,7 +115,7 @@ class Preprocessor:
         missing_features: dict[str, pd.Series] = {}
 
         for c in self.cfg.numeric_cols:
-            if c not in out.columns:
+            if c not in out.columns or c not in self._numeric_medians:
                 continue
             s = pd.to_numeric(out[c], errors="coerce")
             missing_features[f"{c}__is_missing"] = s.isna().astype("int8")

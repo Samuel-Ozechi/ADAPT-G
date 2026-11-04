@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_object_dtype, is_string_dtype
 from sklearn.metrics import average_precision_score
 
 try:
@@ -38,6 +39,20 @@ class LightGBMBaseline:
         self.model: lgb.LGBMClassifier | None = None
         self.tuning_log: list[dict] = []
         self._cat_cols: list[str] = []
+        self._cat_categories: dict[str, pd.Index] = {}
+
+    def _prepare_features(self, X: pd.DataFrame) -> pd.DataFrame:
+        prepared = X.copy()
+        for column in self._cat_cols:
+            if column not in prepared.columns:
+                continue
+            categories = self._cat_categories.get(column)
+            if categories is None:
+                prepared[column] = prepared[column].astype("category")
+                self._cat_categories[column] = prepared[column].cat.categories
+            else:
+                prepared[column] = pd.Categorical(prepared[column], categories=categories)
+        return prepared
 
     def _candidate_grid(self) -> list[LGBMConfig]:
         # Small, bounded grid; <= grid_size fits total.
@@ -55,16 +70,16 @@ class LightGBMBaseline:
     def fit(self, X: pd.DataFrame, y: pd.Series,
             X_val: pd.DataFrame | None = None, y_val: pd.Series | None = None) -> "LightGBMBaseline":
         """If X_val/y_val provided, tune on validation PR-AUC; else use default cfg."""
-        self._cat_cols = [c for c in X.columns if X[c].dtype == object]
-        for c in self._cat_cols:
-            X = X.copy()
-            X_val = X_val.copy() if X_val is not None else None
-        # LightGBM accepts category dtype directly.
-        for d in (X, X_val):
-            if d is None:
-                continue
-            for c in self._cat_cols:
-                d[c] = d[c].astype("category")
+        self._cat_cols = [
+            column for column in X.columns
+            if is_object_dtype(X[column].dtype)
+            or is_string_dtype(X[column].dtype)
+            or isinstance(X[column].dtype, pd.CategoricalDtype)
+        ]
+        self._cat_categories = {}
+        X = self._prepare_features(X)
+        if X_val is not None:
+            X_val = self._prepare_features(X_val)
 
         pos = int(y.sum())
         neg = int(len(y) - pos)
@@ -100,13 +115,19 @@ class LightGBMBaseline:
 
     def predict_score(self, X: pd.DataFrame) -> np.ndarray:
         assert self.model is not None
-        X = X.copy()
-        for c in self._cat_cols:
-            if c in X.columns:
-                X[c] = X[c].astype("category")
+        X = self._prepare_features(X)
         return self.model.predict_proba(X)[:, 1]
 
     def n_parameters(self) -> int:
         assert self.model is not None
         booster = self.model.booster_
-        return int(sum(len(t.split()) for t in booster.dump_model()["tree_info"]))
+
+        def count_leaves(node: dict) -> int:
+            if "leaf_value" in node:
+                return 1
+            return count_leaves(node["left_child"]) + count_leaves(node["right_child"])
+
+        return sum(
+            count_leaves(tree["tree_structure"])
+            for tree in booster.dump_model()["tree_info"]
+        )

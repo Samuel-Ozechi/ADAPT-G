@@ -49,11 +49,16 @@ def _synthetic_fixture(n: int = 500, seed: int = 0) -> tuple[pd.DataFrame, pd.Da
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="configs/base.yaml")
+    ap.add_argument(
+        "--config", action="append", default=None,
+        help="YAML config to load; repeat to deep-merge configs in order",
+    )
     ap.add_argument("--extra-config", action="append", default=[])
     args = ap.parse_args()
 
-    cfg = load_config(args.config, *args.extra_config)
+    config_paths = args.config or ["configs/base.yaml"]
+    config_paths.extend(args.extra_config)
+    cfg = load_config(*config_paths)
     set_seed(int(cfg["project"]["seed"]))
 
     run_id = new_run_id()
@@ -68,6 +73,8 @@ def main() -> None:
         txn = load_transactions(data_dir, dcfg["transaction_file"])
         ident = load_identity(data_dir, dcfg["identity_file"])
     except FileNotFoundError:
+        if data_dir.exists():
+            raise
         logger.info("raw data absent; using synthetic fixture",
                     extra={"run_id": run_id, "ticket": "AG-004"})
         txn, ident = _synthetic_fixture()
@@ -101,13 +108,20 @@ def main() -> None:
     val_p = pre.transform(val)
     test_p = pre.transform(test)
 
-    # Rolling aggregates fitted on train only; applied per fold independently.
+    # Rolling features use only past transactions, carrying history across folds.
     agg = RollingAggregator(RollingConfig(entity_col="card1",
                                           time_col=dcfg["time_column"],
                                           amount_col="TransactionAmt"))
-    train_r = agg.fit_transform(train_p)
-    val_r = agg.fit_transform(val_p)
-    test_r = agg.fit_transform(test_p)
+    n_train, n_val = len(train_p), len(val_p)
+    all_p = pd.concat([train_p, val_p, test_p], ignore_index=True)
+    all_raw = pd.concat([train, val, test], ignore_index=True)
+    all_r = agg.fit_transform(all_raw)
+    rolling_cols = [c for c in all_r.columns if c.startswith("prior_")]
+    for column in rolling_cols:
+        all_p[column] = all_r[column].to_numpy()
+    val_r = all_p.iloc[n_train:n_train + n_val].copy()
+    test_r = all_p.iloc[n_train + n_val:].copy()
+    train_r = all_p.iloc[:n_train].copy()
 
     # Entity overlap report.
     overlap = entity_overlap_report(

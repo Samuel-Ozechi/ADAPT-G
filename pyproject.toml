@@ -9,11 +9,13 @@ description = "Adversarial Diffusion and Probabilistic Transformer-Graphs for Fi
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "numpy",
+    "numpy<2",
     "pandas",
+    "pyarrow",
     "scikit-learn",
     "lightgbm>=4.0",
     "PyYAML",
+    "torch>=2.2"
 ]
 
 [project.optional-dependencies]

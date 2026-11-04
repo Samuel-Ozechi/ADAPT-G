@@ -36,7 +36,10 @@ def _load(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="configs/base.yaml")
+    ap.add_argument(
+        "--config", action="append", default=None,
+        help="YAML config to load; repeat to deep-merge configs in order",
+    )
     ap.add_argument("--extra-config", action="append", default=[])
     ap.add_argument("--train-preds", required=True)
     ap.add_argument("--val-preds", required=True)
@@ -45,7 +48,9 @@ def main() -> None:
     ap.add_argument("--threshold-rule", default="max_f1")
     args = ap.parse_args()
 
-    cfg = load_config(args.config, *args.extra_config)
+    config_paths = args.config or ["configs/base.yaml"]
+    config_paths.extend(args.extra_config)
+    cfg = load_config(*config_paths)
     set_seed(int(cfg["project"]["seed"]))
     run_id = new_run_id()
     run_dir = Path(cfg["paths"]["runs"]) / run_id

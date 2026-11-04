@@ -72,21 +72,30 @@ def _evaluate_and_save(model_name: str, preds_dir: Path, runs_dir: Path,
     return report
 
 
-def main() -> None:
+def _load_cli_config(argv: list[str] | None = None) -> dict:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="configs/base.yaml")
+    ap.add_argument(
+        "--config", action="append", default=None,
+        help="YAML config to load; repeat to deep-merge configs in order",
+    )
     ap.add_argument("--extra-config", action="append", default=[])
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    cfg = load_config(args.config, *args.extra_config)
+    config_paths = args.config or ["configs/base.yaml"]
+    config_paths.extend(args.extra_config)
+    return load_config(*config_paths)
+
+
+def main() -> None:
+    cfg = _load_cli_config()
     seed = int(cfg["project"]["seed"])
     set_seed(seed)
 
     run_id = new_run_id()
     run_dir = Path(cfg["paths"]["runs"]) / run_id
-    logger = get_logger("adapt_g.ag006", run_dir / "run.log",
+    logger = get_logger("adapt_g", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
-    logger.info("AG-006 start", extra={"run_id": run_id, "ticket": "AG-006", "seed": seed})
+    logger.info("AG-006 start", extra={"run_id": run_id, "run": "classical baselines", "seed": seed})
 
     dcfg = cfg["data"]
     data_dir = Path(cfg["paths"]["data_raw"])
@@ -95,6 +104,8 @@ def main() -> None:
         txn = load_transactions(data_dir, dcfg["transaction_file"])
         ident = load_identity(data_dir, dcfg["identity_file"])
     except FileNotFoundError:
+        if data_dir.exists():
+            raise
         logger.info("raw data absent; using synthetic fixture",
                     extra={"run_id": run_id, "ticket": "AG-006"})
         txn, ident = _synthetic_fixture()
@@ -174,10 +185,10 @@ def main() -> None:
         run_dir=run_dir, cfg=cfg,
         dataset_version="synthetic_fixture" if synthetic else f"ieee_cis@{dcfg['transaction_file']}",
         split_boundaries=folds.bounds.__dict__,
-        extra={"ticket": "AG-006", "models": list(models.keys()),
+        extra={"run": "baseline", "models": list(models.keys()),
                "synthetic_fixture": synthetic},
     )
-    logger.info("AG-006 complete", extra={"run_id": run_id, "ticket": "AG-006"})
+    logger.info("Baseline run complete", extra={"run_id": run_id, "ticket": "AG-006"})
     print(f"Wrote baseline table and frozen reference to {run_dir}")
 
 

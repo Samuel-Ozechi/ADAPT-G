@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -14,7 +14,7 @@ from sklearn.impute import SimpleImputer
 class LogRegBaseline:
     name = "logreg"
 
-    def __init__(self, max_iter: int = 200, seed: int = 0) -> None:
+    def __init__(self, max_iter: int = 1000, seed: int = 0) -> None:
         self.max_iter = max_iter
         self.seed = seed
         self.pipe: Pipeline | None = None
@@ -26,7 +26,10 @@ class LogRegBaseline:
         self._num_cols = [c for c in X.columns if is_numeric_dtype(X[c].dtype)]
         pre = ColumnTransformer(
             transformers=[
-                ("num", Pipeline([("imp", SimpleImputer(strategy="median"))]), self._num_cols),
+                ("num", Pipeline([
+                    ("imp", SimpleImputer(strategy="median")),
+                    ("scale", StandardScaler(with_mean=False)),
+                ]), self._num_cols),
                 ("cat", Pipeline([
                     ("imp", SimpleImputer(strategy="constant", fill_value="__MISSING__")),
                     ("oh", OneHotEncoder(handle_unknown="ignore", min_frequency=20)),

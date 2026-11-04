@@ -4,7 +4,8 @@ Pipeline:
 1. Raw transactions + identity joined.
 2. Chronological split.
 3. Preprocessor.fit(train) -> transform each fold.
-4. RollingAggregator on each fold independently.
+4. RollingAggregator over the chronological folds, carrying prior-fold
+    transactions forward without using future rows or labels.
 5. Concatenate features; drop identifier/time/target columns from X.
 """
 from __future__ import annotations
@@ -62,9 +63,16 @@ def build_tabular_folds(
         entity_col="card1", time_col=time_col, amount_col="TransactionAmt",
         windows_seconds=rolling_windows,
     ))
-    train_r = agg.fit_transform(train_p)
-    val_r = agg.fit_transform(val_p)
-    test_r = agg.fit_transform(test_p)
+    n_train, n_val = len(train_p), len(val_p)
+    all_p = pd.concat([train_p, val_p, test_p], ignore_index=True)
+    all_raw = pd.concat([train, val, test], ignore_index=True)
+    all_r = agg.fit_transform(all_raw)
+    rolling_cols = [c for c in all_r.columns if c.startswith("prior_")]
+    for column in rolling_cols:
+        all_p[column] = all_r[column].to_numpy()
+    train_r = all_p.iloc[:n_train].copy()
+    val_r = all_p.iloc[n_train:n_train + n_val].copy()
+    test_r = all_p.iloc[n_train + n_val:].copy()
 
     drop = {id_col, time_col, target_col}
     feats = [c for c in train_r.columns if c not in drop]

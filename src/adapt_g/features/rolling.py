@@ -27,6 +27,10 @@ class RollingAggregator:
     """
 
     def __init__(self, cfg: RollingConfig):
+        if any(window <= 0 for window in cfg.windows_seconds):
+            raise ValueError("Rolling windows must be positive seconds")
+        if cfg.min_history < 0:
+            raise ValueError("min_history must be non-negative")
         self.cfg = cfg
 
     def fit_transform(self, df: pd.DataFrame, id_col: str = "TransactionID") -> pd.DataFrame:
@@ -37,18 +41,43 @@ class RollingAggregator:
         out = out.sort_values([cfg.entity_col, cfg.time_col, id_col],
                               kind="mergesort").reset_index(drop=True)
 
-        group = out.groupby(cfg.entity_col, sort=False)
-        # Prior count (excludes current row).
-        out["prior_count"] = group.cumcount().astype("int32")
-        # Prior amount sum / mean via shifted cumsum.
-        amounts = out[cfg.amount_col].astype(float)
-        out["prior_amt_sum"] = group[cfg.amount_col].cumsum().shift(1).fillna(0.0).values
+        # All aggregates exclude every transaction at the current timestamp,
+        # not merely the current row. This also avoids cross-entity leakage
+        # from shifting a globally concatenated grouped cumulative sum.
+        group_positions = out.groupby(cfg.entity_col, sort=False).indices.values()
+        times = out[cfg.time_col].to_numpy()
+        amounts = out[cfg.amount_col].astype(float).to_numpy()
+        prior_count = np.zeros(len(out), dtype=np.int32)
+        prior_sum = np.zeros(len(out), dtype=float)
+        window_counts = {
+            w: np.zeros(len(out), dtype=np.int32) for w in cfg.windows_seconds
+        }
+        window_sums = {
+            w: np.zeros(len(out), dtype=float) for w in cfg.windows_seconds
+        }
+
+        for positions in group_positions:
+            entity_times = times[positions]
+            entity_amounts = np.nan_to_num(amounts[positions], nan=0.0)
+            prefix = np.concatenate(([0.0], np.cumsum(entity_amounts)))
+            # searchsorted(..., left) makes all equal-time rows share the
+            # same history endpoint, strictly before their timestamp.
+            right = np.searchsorted(entity_times, entity_times, side="left")
+            prior_count[positions] = right
+            prior_sum[positions] = prefix[right]
+            for w in cfg.windows_seconds:
+                left = np.searchsorted(entity_times, entity_times - w, side="right")
+                window_counts[w][positions] = right - left
+                window_sums[w][positions] = prefix[right] - prefix[left]
+
+        out["prior_count"] = prior_count
+        out["prior_amt_sum"] = prior_sum
 
         for w in cfg.windows_seconds:
             col_cnt = f"prior_count_{w}s"
             col_sum = f"prior_amt_sum_{w}s"
-            out[col_cnt] = self._rolling_count(out, cfg, w)
-            out[col_sum] = self._rolling_sum(out, cfg, w, amounts)
+            out[col_cnt] = window_counts[w]
+            out[col_sum] = window_sums[w]
             out[f"prior_amt_mean_{w}s"] = np.where(
                 out[col_cnt] > 0, out[col_sum] / out[col_cnt], np.nan
             )
@@ -63,39 +92,3 @@ class RollingAggregator:
         out = out.sort_values("__orig_idx").drop(columns="__orig_idx").reset_index(drop=True)
         return out
 
-    @staticmethod
-    def _rolling_count(out: pd.DataFrame, cfg: RollingConfig, w: int) -> pd.Series:
-        # Vectorised per-entity window count using groupby + rolling on time.
-        result = np.zeros(len(out), dtype="int32")
-        for positions in out.groupby(cfg.entity_col, sort=False).indices.values():
-            g = out.iloc[positions]
-            t = g[cfg.time_col].values
-            res = np.zeros(len(t), dtype="int32")
-            # Two-pointer over sorted times.
-            left = 0
-            for i in range(len(t)):
-                while t[left] <= t[i] - w:
-                    left += 1
-                res[i] = i - left  # strictly prior rows within window
-            result[positions] = res
-        return pd.Series(result, index=out.index)
-
-    @staticmethod
-    def _rolling_sum(out: pd.DataFrame, cfg: RollingConfig, w: int,
-                     amounts: pd.Series) -> pd.Series:
-        result = np.zeros(len(out), dtype=float)
-        for positions in out.groupby(cfg.entity_col, sort=False).indices.values():
-            g = out.iloc[positions]
-            t = g[cfg.time_col].values
-            a = amounts.iloc[positions].values
-            res = np.zeros(len(t), dtype=float)
-            left = 0
-            running = 0.0
-            for i in range(len(t)):
-                while t[left] <= t[i] - w:
-                    running -= a[left]
-                    left += 1
-                res[i] = running  # sum of prior rows within window
-                running += a[i]
-            result[positions] = res
-        return pd.Series(result, index=out.index)
