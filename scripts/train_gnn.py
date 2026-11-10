@@ -230,7 +230,7 @@ def main() -> None:
     synthetic = False
     transaction_cols = list(dict.fromkeys([
         dcfg["id_column"], dcfg["target_column"], dcfg["time_column"],
-        "card1", "addr1", "P_emaildomain",
+        "TransactionAmt", "ProductCD", "card1", "addr1", "P_emaildomain",
     ]))
     identity_cols = list(dict.fromkeys([dcfg["id_column"], "DeviceInfo"]))
     try:
