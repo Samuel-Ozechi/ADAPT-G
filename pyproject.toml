@@ -22,6 +22,9 @@ dependencies = [
 dev = [
     "pytest>=7.4", "pytest-cov>=4.1"
 ]
+data = [
+    "kaggle>=1.6"
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

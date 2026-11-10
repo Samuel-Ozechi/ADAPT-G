@@ -1,0 +1,3 @@
+# Install the project and its Kaggle dataset-download helper.
+# Runtime dependencies are maintained in pyproject.toml.
+-e .[data]
