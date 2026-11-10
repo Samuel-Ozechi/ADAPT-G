@@ -39,9 +39,12 @@ def _stable_tiebreak(node_id: str, dt_t: float) -> int:
     return int(h[:8], 16)
 
 
-def _adjacency(edges: list[EntityEdge]) -> dict[str, list[tuple[str, EntityEdge]]]:
+def build_adjacency(
+    build: GraphBuild,
+) -> dict[str, list[tuple[str, EntityEdge]]]:
+    """Index graph edges once for reuse across many transaction snapshots."""
     adj: dict[str, list[tuple[str, EntityEdge]]] = defaultdict(list)
-    for e in edges:
+    for e in build.edges:
         adj[e.src].append((e.dst, e))
         adj[e.dst].append((e.src, e))
     return adj
@@ -52,6 +55,7 @@ def sample_neighbourhood(
     card_id: int | None,
     dt_t: float,
     cfg: SamplerConfig | None = None,
+    adjacency: dict[str, list[tuple[str, EntityEdge]]] | None = None,
 ) -> SampledSubgraph:
     cfg = cfg or SamplerConfig()
     if card_id is None:
@@ -68,7 +72,7 @@ def sample_neighbourhood(
             is_isolated=True, depth={cfg.isolated_token: 0},
         )
 
-    adj = _adjacency(build.edges)
+    adj = adjacency if adjacency is not None else build_adjacency(build)
     visited: set[str] = {root}
     depth = {root: 0}
     queue = deque([(root, 0)])

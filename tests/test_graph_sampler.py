@@ -1,7 +1,11 @@
 import pandas as pd
 
 from adapt_g.graph.builder import GraphConfig, build_temporal_graph
-from adapt_g.graph.sampler import SamplerConfig, sample_neighbourhood
+from adapt_g.graph.sampler import (
+    SamplerConfig,
+    build_adjacency,
+    sample_neighbourhood,
+)
 
 
 def _build():
@@ -53,3 +57,16 @@ def test_deterministic_across_calls():
     assert a.nodes == b.nodes
     assert [(e.src, e.dst, e.edge_type) for e in a.edges] == \
            [(e.src, e.dst, e.edge_type) for e in b.edges]
+
+
+def test_reused_adjacency_matches_default_sampling():
+    build = _build()
+    adjacency = build_adjacency(build)
+    expected = sample_neighbourhood(build, card_id=1, dt_t=500)
+    actual = sample_neighbourhood(
+        build, card_id=1, dt_t=500, adjacency=adjacency
+    )
+    assert actual.nodes == expected.nodes
+    assert [(e.src, e.dst, e.edge_type) for e in actual.edges] == [
+        (e.src, e.dst, e.edge_type) for e in expected.edges
+    ]

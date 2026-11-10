@@ -17,12 +17,20 @@ def _path(data_dir: str | Path, filename: str) -> Path:
     return p
 
 
-def load_transactions(data_dir: str | Path, filename: str) -> pd.DataFrame:
-    return pd.read_csv(_path(data_dir, filename))
+def load_transactions(
+    data_dir: str | Path,
+    filename: str,
+    usecols: list[str] | None = None,
+) -> pd.DataFrame:
+    return pd.read_csv(_path(data_dir, filename), usecols=usecols)
 
 
-def load_identity(data_dir: str | Path, filename: str) -> pd.DataFrame:
-    return pd.read_csv(_path(data_dir, filename))
+def load_identity(
+    data_dir: str | Path,
+    filename: str,
+    usecols: list[str] | None = None,
+) -> pd.DataFrame:
+    return pd.read_csv(_path(data_dir, filename), usecols=usecols)
 
 
 def join_identity(
