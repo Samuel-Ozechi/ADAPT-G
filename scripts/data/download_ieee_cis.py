@@ -1,7 +1,7 @@
 """Download the IEEE-CIS Fraud Detection competition files from Kaggle.
 
 Before running, accept the competition rules on Kaggle and configure the Kaggle
-API credentials. The two CSVs are written to data/raw/ieee_cis by default.
+API credentials. The train and test CSVs are written to data/raw/ieee_cis by default.
 """
 from __future__ import annotations
 
@@ -12,19 +12,24 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-FILES = ("train_transaction.csv", "train_identity.csv")
+FILES = (
+    "train_transaction.csv",
+    "train_identity.csv",
+    "test_transaction.csv",
+    "test_identity.csv",
+)
 COMPETITION = "ieee-fraud-detection"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def download(output_dir: Path, *, force: bool = False) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
-    existing = [name for name in FILES if (output_dir / name).exists()]
-    if existing and not force:
-        names = ", ".join(existing)
-        raise FileExistsError(
-            f"Refusing to overwrite existing file(s): {names}. Pass --force to replace them."
-        )
+    targets = FILES if force else tuple(
+        name for name in FILES if not (output_dir / name).exists()
+    )
+    if not targets:
+        print(f"All IEEE-CIS CSVs already exist in {output_dir.resolve()} (use --force to replace).")
+        return
 
     with tempfile.TemporaryDirectory(prefix="adapt-g-ieee-cis-") as temp_dir:
         temp_path = Path(temp_dir)
@@ -65,15 +70,15 @@ def download(output_dir: Path, *, force: bool = False) -> None:
                     f"missing or duplicated: {', '.join(missing)}."
                 )
 
-            for name in FILES:
+            for name in targets:
                 with archive.open(members_by_name[name][0]) as source:
                     with (staged_dir / name).open("wb") as destination:
                         shutil.copyfileobj(source, destination)
 
-        for name in FILES:
+        for name in targets:
             (staged_dir / name).replace(output_dir / name)
 
-    print(f"Downloaded IEEE-CIS CSVs to {output_dir.resolve()}")
+    print(f"Downloaded {', '.join(targets)} to {output_dir.resolve()}")
 
 
 def main() -> None:
@@ -87,7 +92,7 @@ def main() -> None:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Replace existing train_transaction.csv/train_identity.csv files.",
+        help="Replace any existing IEEE-CIS train/test CSVs.",
     )
     args = parser.parse_args()
 

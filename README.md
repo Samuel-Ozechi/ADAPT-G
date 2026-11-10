@@ -23,8 +23,11 @@ pip install -r requirements.txt
 python scripts/data/download_ieee_cis.py
 ```
 
-The downloader saves `train_transaction.csv` and `train_identity.csv` under
-`data/raw/ieee_cis/`. Use `--force` to replace existing copies.
+The downloader saves the train and test transaction/identity CSVs under
+`data/raw/ieee_cis/`. It only downloads missing files by default, preserving
+files already there; use `--force` to replace them. The Kaggle test data has no
+`isFraud` labels, so it is for prediction/submission rather than labeled test
+evaluation.
 
 ## Google Colab quickstart
 
