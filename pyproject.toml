@@ -23,7 +23,7 @@ dev = [
     "pytest>=7.4", "pytest-cov>=4.1"
 ]
 data = [
-    "kaggle>=1.6"
+    "gdown>=5.2"
 ]
 
 [tool.setuptools]

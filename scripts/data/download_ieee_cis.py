@@ -1,16 +1,12 @@
-"""Download the IEEE-CIS Fraud Detection competition files from Kaggle.
-
-Before running, accept the competition rules on Kaggle and configure the Kaggle
-API credentials. The train and test CSVs are written to data/raw/ieee_cis by default.
-"""
+"""Download the shared IEEE-CIS CSVs from Google Drive."""
 from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
 import tempfile
-import zipfile
 from pathlib import Path
+
+import gdown
 
 FILES = (
     "train_transaction.csv",
@@ -18,7 +14,10 @@ FILES = (
     "test_transaction.csv",
     "test_identity.csv",
 )
-COMPETITION = "ieee-fraud-detection"
+DRIVE_FOLDER_URL = (
+    "https://drive.google.com/drive/folders/"
+    "1YT3_HhW66pF51OwKlikQiswseV7Y_e1n?usp=sharing"
+)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -32,51 +31,30 @@ def download(output_dir: Path, *, force: bool = False) -> None:
         return
 
     with tempfile.TemporaryDirectory(prefix="adapt-g-ieee-cis-") as temp_dir:
-        temp_path = Path(temp_dir)
-        archive_dir = temp_path / "download"
-        archive_dir.mkdir()
-        subprocess.run(
-            [
-                "kaggle",
-                "competitions",
-                "download",
-                "-c",
-                COMPETITION,
-                "-p",
-                str(archive_dir),
-            ],
-            check=True,
+        download_dir = Path(temp_dir) / "drive-download"
+        download_dir.mkdir()
+        gdown.download_folder(
+            url=DRIVE_FOLDER_URL,
+            output=str(download_dir),
+            quiet=False,
+            use_cookies=False,
         )
 
-        archives = list(archive_dir.glob("*.zip"))
-        if len(archives) != 1:
+        members_by_name: dict[str, list[Path]] = {name: [] for name in FILES}
+        for path in download_dir.rglob("*"):
+            if path.is_file() and path.name in members_by_name:
+                members_by_name[path.name].append(path)
+
+        missing = [name for name, paths in members_by_name.items() if len(paths) != 1]
+        if missing:
             raise RuntimeError(
-                f"Expected one Kaggle ZIP archive in {archive_dir}, found {len(archives)}."
+                "The shared Google Drive folder must contain exactly one copy "
+                "of each required CSV; missing or duplicated: "
+                f"{', '.join(missing)}. Check the folder's link-sharing access."
             )
 
-        staged_dir = temp_path / "staged"
-        staged_dir.mkdir()
-        with zipfile.ZipFile(archives[0]) as archive:
-            members_by_name: dict[str, list[str]] = {name: [] for name in FILES}
-            for member in archive.namelist():
-                basename = Path(member).name
-                if basename in members_by_name:
-                    members_by_name[basename].append(member)
-
-            missing = [name for name, members in members_by_name.items() if len(members) != 1]
-            if missing:
-                raise RuntimeError(
-                    "Kaggle archive must contain exactly one copy of each required file; "
-                    f"missing or duplicated: {', '.join(missing)}."
-                )
-
-            for name in targets:
-                with archive.open(members_by_name[name][0]) as source:
-                    with (staged_dir / name).open("wb") as destination:
-                        shutil.copyfileobj(source, destination)
-
         for name in targets:
-            (staged_dir / name).replace(output_dir / name)
+            shutil.copy2(members_by_name[name][0], output_dir / name)
 
     print(f"Downloaded {', '.join(targets)} to {output_dir.resolve()}")
 
@@ -96,18 +74,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    try:
-        download(args.output_dir, force=args.force)
-    except FileNotFoundError as error:
-        if error.filename == "kaggle":
-            parser.error("Kaggle CLI not found; install this project's requirements.txt first.")
-        raise
-    except subprocess.CalledProcessError as error:
-        parser.error(
-            "Kaggle download failed. Confirm API credentials are configured and that "
-            "you accepted the IEEE-CIS competition rules on Kaggle. "
-            f"(exit code {error.returncode})"
-        )
+    download(args.output_dir, force=args.force)
 
 
 if __name__ == "__main__":
