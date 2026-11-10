@@ -1,0 +1,7 @@
+{"ts": "2026-11-03T00:45:19.778003+00:00", "level": "INFO", "logger": "adapt_g", "msg": "AG-006 start", "run_id": "20261103T004519Z_a30bb988", "seed": 42}
+{"ts": "2026-11-03T00:50:21.531391+00:00", "level": "INFO", "logger": "adapt_g", "msg": "folds: train=472432 val=59054 test=59054 feats=843", "run_id": "20261103T004519Z_a30bb988", "ticket": "AG-006"}
+{"ts": "2026-11-03T00:50:21.532091+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training majority", "run_id": "20261103T004519Z_a30bb988", "event": "train_start", "extra": {"model": "majority"}}
+{"ts": "2026-11-03T00:50:43.820376+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training rule", "run_id": "20261103T004519Z_a30bb988", "event": "train_start", "extra": {"model": "rule"}}
+{"ts": "2026-11-03T00:51:02.977209+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training logreg", "run_id": "20261103T004519Z_a30bb988", "event": "train_start", "extra": {"model": "logreg"}}
+{"ts": "2026-11-03T01:00:31.865860+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training lightgbm", "run_id": "20261103T004519Z_a30bb988", "event": "train_start", "extra": {"model": "lightgbm"}}
+{"ts": "2026-11-03T01:09:20.302548+00:00", "level": "INFO", "logger": "adapt_g", "msg": "AG-006 complete", "run_id": "20261103T004519Z_a30bb988", "ticket": "AG-006"}

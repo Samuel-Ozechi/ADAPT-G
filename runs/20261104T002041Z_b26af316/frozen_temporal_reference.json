@@ -1,0 +1,35 @@
+{
+  "synthetic_fixture": false,
+  "bounds": {
+    "train_max_dt": 12192842.0,
+    "val_max_dt": 13990904.0,
+    "train_q": 0.8,
+    "val_q": 0.9,
+    "n_train": 472432,
+    "n_val": 59054,
+    "n_test": 59054,
+    "train_fraud_rate": 0.03513521522674162,
+    "val_fraud_rate": 0.03134419345006265,
+    "test_fraud_rate": 0.03747417617773563
+  },
+  "product_vocab_size": 7,
+  "step_feature_names": [
+    "log1p_amount",
+    "gap_seconds",
+    "log1p_gap",
+    "product_code"
+  ],
+  "current_feature_names": [
+    "log1p_amount",
+    "amount_zero",
+    "product_code",
+    "has_identity"
+  ],
+  "max_len": 32,
+  "n_parameters": 75905,
+  "epochs": 5,
+  "batch_size": 512,
+  "lr": 0.001,
+  "pos_weight": 27.46147346496582,
+  "device": "cpu"
+}

@@ -1,0 +1,11 @@
+{
+  "sample_n": 200,
+  "isolated_fraction": 0.015,
+  "nodes_per_snapshot_mean": 90.61,
+  "nodes_per_snapshot_std": 32.14277368243133,
+  "edges_per_snapshot_mean": 89.61,
+  "edges_per_snapshot_std": 32.14277368243133,
+  "k_hops": 2,
+  "fan_out": 10,
+  "synthetic_fixture": false
+}

@@ -1,0 +1,16 @@
+{
+  "n_edges": 75736,
+  "n_nodes": 15231,
+  "edge_type_counts": {
+    "card_card": 13131,
+    "card_addr": 36024,
+    "addr_email": 1989,
+    "card_device": 24592
+  },
+  "node_kind_counts": {
+    "card": 13131,
+    "addr": 330,
+    "email": 59,
+    "device": 1711
+  }
+}

@@ -1,0 +1,2 @@
+{"ts": "2026-11-04T01:30:51.938172+00:00", "level": "INFO", "logger": "adapt_g.ag008", "msg": "edges=75736 nodes=15231", "run_id": "20261104T012943Z_b7571e7a", "ticket": "AG-008"}
+{"ts": "2026-11-04T01:32:04.208450+00:00", "level": "INFO", "logger": "adapt_g.ag008", "msg": "AG-008 complete", "run_id": "20261104T012943Z_b7571e7a", "ticket": "AG-008"}

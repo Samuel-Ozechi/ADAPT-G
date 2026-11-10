@@ -1,0 +1,8 @@
+{
+  "latency_full_test_mean_s": 7.664295932333289,
+  "latency_full_test_std_s": 0.1328597055907594,
+  "n_test": 59054,
+  "batch_size": 512,
+  "device": "cpu",
+  "n_parameters": 75905
+}

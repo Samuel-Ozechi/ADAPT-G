@@ -1,0 +1,3 @@
+{"ts": "2026-11-03T01:50:22.135233+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "device=cpu", "run_id": "20261103T015022Z_c80da83b", "seed": 42}
+{"ts": "2026-11-03T03:59:52.666776+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "sequences: train=472432 val=59054 test=59054 max_len=32", "run_id": "20261103T015022Z_c80da83b", "seed": 42}
+{"ts": "2026-11-03T03:59:52.845618+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "params=75905", "run_id": "20261103T015022Z_c80da83b", "seed": 42}
