@@ -219,7 +219,7 @@ def main() -> None:
     cfg, args = _load_cli_config()
     set_seed(int(cfg["project"]["seed"]))
     torch.manual_seed(int(cfg["project"]["seed"]))
-    run_id = new_run_id()
+    run_id = new_run_id("gnn")
     run_dir = Path(cfg["paths"]["runs"]) / run_id
     logger = get_logger("adapt_g.ag009", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
@@ -233,18 +233,13 @@ def main() -> None:
         "TransactionAmt", "ProductCD", "card1", "addr1", "P_emaildomain",
     ]))
     identity_cols = list(dict.fromkeys([dcfg["id_column"], "DeviceInfo"]))
-    try:
-        txn = load_transactions(
+    txn = load_transactions(
             data_dir, dcfg["transaction_file"], usecols=transaction_cols
         )
-        ident = load_identity(
+    ident = load_identity(
             data_dir, dcfg["identity_file"], usecols=identity_cols
         )
-    except FileNotFoundError:
-        logger.info("raw data absent; using synthetic fixture",
-                    extra={"run_id": run_id, "ticket": "AG-009"})
-        txn, ident = _synthetic_fixture()
-        synthetic = True
+    
 
     df = join_identity(txn, ident, dcfg["id_column"])
     del txn, ident
@@ -342,12 +337,11 @@ def main() -> None:
 
     write_manifest(
         run_dir=run_dir, cfg=cfg,
-        dataset_version="synthetic_fixture" if synthetic else f"ieee_cis@{dcfg['transaction_file']}",
+        dataset_version=f"ieee_cis@{dcfg['transaction_file']}",
         split_boundaries=bounds.__dict__,
-        extra={"ticket": "AG-009", "synthetic_fixture": synthetic,
-               "n_parameters": model.n_parameters()},
+        extra={"tag": "GNN", "models": ["gnn"], "ticket": "AG-009"},
     )
-    logger.info("AG-009 complete", extra={"run_id": run_id, "ticket": "AG-009"})
+    logger.info("GNN baseline complete", extra={"run_id": run_id, "run": "gnn baseline", "seed": int(cfg["project"]["seed"])})
     print(f"Wrote GNN reference and reports to {run_dir}")
 
 

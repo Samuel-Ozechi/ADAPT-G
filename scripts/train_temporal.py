@@ -148,7 +148,7 @@ def main() -> None:
     set_seed(seed)
     torch.manual_seed(seed)
 
-    run_id = new_run_id()
+    run_id = new_run_id("transformer")
     run_dir = Path(cfg["paths"]["runs"]) / run_id
     logger = get_logger("adapt_g.ag007", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
@@ -158,16 +158,9 @@ def main() -> None:
     dcfg = cfg["data"]
     data_dir = Path(cfg["paths"]["data_raw"])
     synthetic = False
-    try:
-        txn = load_transactions(data_dir, dcfg["transaction_file"])
-        ident = load_identity(data_dir, dcfg["identity_file"])
-    except FileNotFoundError:
-        if data_dir.exists():
-            raise
-        logger.info("raw data absent; using synthetic fixture",
-                    extra={"run_id": run_id, "run": "transformer baseline", "seed": seed})
-        txn, ident = _synthetic_fixture()
-        synthetic = True
+    
+    txn = load_transactions(data_dir, dcfg["transaction_file"])
+    ident = load_identity(data_dir, dcfg["identity_file"])
 
     sf = build_sequence_folds(
         txn, ident, id_col=dcfg["id_column"], time_col=dcfg["time_column"],
@@ -244,10 +237,9 @@ def main() -> None:
 
     write_manifest(
         run_dir=run_dir, cfg=cfg,
-        dataset_version="synthetic_fixture" if synthetic else f"ieee_cis@{dcfg['transaction_file']}",
+        dataset_version= f"ieee_cis@{dcfg['transaction_file']}",
         split_boundaries=sf.bounds,
-        extra={"run": "transformer baseline", "synthetic_fixture": synthetic,
-               "n_parameters": model.n_parameters()},
+        extra={"tag": "transformer", "models": ["transformer"], "ticket": "AG-007"},
     )
     logger.info("Transformer baseline complete", extra={"run_id": run_id, "run": "transformer baseline", "seed": seed})
     print(f"Wrote temporal reference and profile to {run_dir}")

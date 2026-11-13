@@ -1,0 +1,7 @@
+{"ts": "2026-11-13T10:41:40.061226+00:00", "level": "INFO", "logger": "adapt_g", "msg": "AG-006 start", "run_id": "baseline-2026-11-13-104140-4a00ae", "seed": 42}
+{"ts": "2026-11-13T10:44:17.879832+00:00", "level": "INFO", "logger": "adapt_g", "msg": "folds: train=472432 val=59054 test=59054 feats=843", "run_id": "baseline-2026-11-13-104140-4a00ae", "ticket": "AG-006"}
+{"ts": "2026-11-13T10:44:17.893470+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training majority", "run_id": "baseline-2026-11-13-104140-4a00ae", "event": "train_start", "extra": {"model": "majority"}}
+{"ts": "2026-11-13T10:44:40.052585+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training rule", "run_id": "baseline-2026-11-13-104140-4a00ae", "event": "train_start", "extra": {"model": "rule"}}
+{"ts": "2026-11-13T10:45:00.441427+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training logreg", "run_id": "baseline-2026-11-13-104140-4a00ae", "event": "train_start", "extra": {"model": "logreg"}}
+{"ts": "2026-11-13T11:00:49.435151+00:00", "level": "INFO", "logger": "adapt_g", "msg": "training lightgbm", "run_id": "baseline-2026-11-13-104140-4a00ae", "event": "train_start", "extra": {"model": "lightgbm"}}
+{"ts": "2026-11-13T11:09:20.256907+00:00", "level": "INFO", "logger": "adapt_g", "msg": "Baseline run complete", "run_id": "baseline-2026-11-13-104140-4a00ae", "seed": 42}

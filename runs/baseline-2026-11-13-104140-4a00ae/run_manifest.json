@@ -1,0 +1,124 @@
+{
+  "run_id": "baseline-2026-11-13-104140-4a00ae",
+  "tag": "baseline",
+  "created_utc": "2026-11-13T11:09:20.127532+00:00",
+  "git_commit": "e0ff6feb0ba7f8710639be840afae675bee37946",
+  "config_hash": "80e0bab28ef12b5b",
+  "config": {
+    "project": {
+      "name": "adapt-g",
+      "seed": 42
+    },
+    "paths": {
+      "data_raw": "data/raw/ieee_cis",
+      "runs": "runs"
+    },
+    "logging": {
+      "level": "INFO",
+      "json": true
+    },
+    "data": {
+      "transaction_file": "train_transaction.csv",
+      "identity_file": "train_identity.csv",
+      "id_column": "TransactionID",
+      "target_column": "isFraud",
+      "time_column": "TransactionDT"
+    },
+    "split": {
+      "train_end_q": 0.8,
+      "val_end_q": 0.9
+    },
+    "fields": {
+      "card": [
+        "card1",
+        "card2",
+        "card3",
+        "card4",
+        "card5",
+        "card6"
+      ],
+      "address": [
+        "addr1",
+        "addr2"
+      ],
+      "email": [
+        "P_emaildomain",
+        "R_emaildomain"
+      ],
+      "vesta_c": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "C14"
+      ],
+      "vesta_d": [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "D8",
+        "D9",
+        "D10",
+        "D11",
+        "D12",
+        "D13",
+        "D14",
+        "D15"
+      ],
+      "vesta_m": [
+        "M1",
+        "M2",
+        "M3",
+        "M4",
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9"
+      ],
+      "vesta_v_prefix": "V",
+      "identity_prefix": "id_",
+      "device": [
+        "DeviceType",
+        "DeviceInfo"
+      ]
+    }
+  },
+  "dataset_version": "ieee_cis@train_transaction.csv",
+  "split_boundaries": {
+    "train_max_dt": 12192842.0,
+    "val_max_dt": 13990904.0,
+    "train_q": 0.8,
+    "val_q": 0.9,
+    "n_train": 472432,
+    "n_val": 59054,
+    "n_test": 59054,
+    "train_fraud_rate": 0.03513521522674162,
+    "val_fraud_rate": 0.03134419345006265,
+    "test_fraud_rate": 0.03747417617773563
+  },
+  "synthetic_fixture": false,
+  "extra": {
+    "tag": "baseline",
+    "models": [
+      "majority",
+      "rule",
+      "logreg",
+      "lightgbm"
+    ],
+    "ticket": "AG-006"
+  }
+}

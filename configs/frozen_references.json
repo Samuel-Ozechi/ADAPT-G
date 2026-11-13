@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "run_id": "baseline-2026-11-13-104140-4a00ae",
+    "tag": "baseline",
+    "ticket": "AG-006",
+    "preds_dir": "runs/baseline-2026-11-13-104140-4a00ae/preds",
+    "evaluation_dir": "runs/baseline-2026-11-13-104140-4a00ae/evaluation",
+    "config": "runs/baseline-2026-11-13-104140-4a00ae/frozen_reference.json"
+  },
+  "transformer": {
+    "run_id": "transformer-2026-11-13-131620-b6fb3a",
+    "tag": "transformer",
+    "ticket": "AG-007",
+    "preds_dir": "runs/transformer-2026-11-13-131620-b6fb3a/preds",
+    "evaluation_dir": "runs/transformer-2026-11-13-131620-b6fb3a/evaluation",
+    "config": "runs/transformer-2026-11-13-131620-b6fb3a/frozen_temporal_reference.json"
+  }
+}

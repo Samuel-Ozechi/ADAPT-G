@@ -1,0 +1,4 @@
+{"ts": "2026-11-13T13:16:20.475539+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "device=cpu", "run_id": "transformer-2026-11-13-131620-b6fb3a", "seed": 42}
+{"ts": "2026-11-13T13:22:23.263226+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "sequences: train=472432 val=59054 test=59054 max_len=32", "run_id": "transformer-2026-11-13-131620-b6fb3a", "seed": 42}
+{"ts": "2026-11-13T13:22:23.449790+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "params=75905", "run_id": "transformer-2026-11-13-131620-b6fb3a", "seed": 42}
+{"ts": "2026-11-13T13:45:33.284472+00:00", "level": "INFO", "logger": "adapt_g.ag007", "msg": "Transformer baseline complete", "run_id": "transformer-2026-11-13-131620-b6fb3a", "seed": 42}

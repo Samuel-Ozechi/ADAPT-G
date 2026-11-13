@@ -61,7 +61,7 @@ def _load_cli_config(argv: list[str] | None = None) -> tuple[dict, argparse.Name
 def main() -> None:
     cfg, args = _load_cli_config()
     set_seed(int(cfg["project"]["seed"]))
-    run_id = new_run_id()
+    run_id = new_run_id("graph")
     run_dir = Path(cfg["paths"]["runs"]) / run_id
     logger = get_logger("adapt_g.ag008", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
@@ -69,14 +69,9 @@ def main() -> None:
     dcfg = cfg["data"]
     data_dir = Path(cfg["paths"]["data_raw"])
     synthetic = False
-    try:
-        txn = load_transactions(data_dir, dcfg["transaction_file"])
-        ident = load_identity(data_dir, dcfg["identity_file"])
-    except FileNotFoundError:
-        logger.info("raw data absent; using synthetic fixture",
-                    extra={"run_id": run_id, "ticket": "AG-008"})
-        txn, ident = _synthetic_fixture()
-        synthetic = True
+    txn = load_transactions(data_dir, dcfg["transaction_file"])
+    ident = load_identity(data_dir, dcfg["identity_file"])
+    
 
     df = join_identity(txn, ident, dcfg["id_column"])
     train, val, test, bounds = chronological_split(
@@ -132,11 +127,11 @@ def main() -> None:
 
     write_manifest(
         run_dir=run_dir, cfg=cfg,
-        dataset_version="synthetic_fixture" if synthetic else f"ieee_cis@{dcfg['transaction_file']}",
+        dataset_version=f"ieee_cis@{dcfg['transaction_file']}",
         split_boundaries=bounds.__dict__,
-        extra={"ticket": "AG-008", "synthetic_fixture": synthetic},
+        extra={"tag": "graph", "ticket": "AG-008"},
     )
-    logger.info("AG-008 complete", extra={"run_id": run_id, "ticket": "AG-008"})
+    logger.info("Graph build and sampling complete", extra={"run_id": run_id, "run": "graph build"})
     print(f"Wrote graph statistics to {run_dir}")
 
 

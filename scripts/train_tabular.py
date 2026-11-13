@@ -91,7 +91,7 @@ def main() -> None:
     seed = int(cfg["project"]["seed"])
     set_seed(seed)
 
-    run_id = new_run_id()
+    run_id = new_run_id("baseline")
     run_dir = Path(cfg["paths"]["runs"]) / run_id
     logger = get_logger("adapt_g", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
@@ -100,17 +100,10 @@ def main() -> None:
     dcfg = cfg["data"]
     data_dir = Path(cfg["paths"]["data_raw"])
     synthetic = False
-    try:
-        txn = load_transactions(data_dir, dcfg["transaction_file"])
-        ident = load_identity(data_dir, dcfg["identity_file"])
-    except FileNotFoundError:
-        if data_dir.exists():
-            raise
-        logger.info("raw data absent; using synthetic fixture",
-                    extra={"run_id": run_id, "ticket": "AG-006"})
-        txn, ident = _synthetic_fixture()
-        synthetic = True
-
+    
+    txn = load_transactions(data_dir, dcfg["transaction_file"])
+    ident = load_identity(data_dir, dcfg["identity_file"])
+    
     folds = build_tabular_folds(
         txn, ident,
         id_col=dcfg["id_column"], time_col=dcfg["time_column"],
@@ -183,12 +176,11 @@ def main() -> None:
 
     write_manifest(
         run_dir=run_dir, cfg=cfg,
-        dataset_version="synthetic_fixture" if synthetic else f"ieee_cis@{dcfg['transaction_file']}",
+        dataset_version=f"ieee_cis@{dcfg['transaction_file']}",
         split_boundaries=folds.bounds.__dict__,
-        extra={"run": "baseline", "models": list(models.keys()),
-               "synthetic_fixture": synthetic},
+        extra={"tag": "baseline", "models": list(models.keys()), "ticket": "AG-006"},
     )
-    logger.info("Baseline run complete", extra={"run_id": run_id, "ticket": "AG-006"})
+    logger.info("Baseline run complete", extra={"run_id": run_id, "run": "classical baselines", "seed": seed})
     print(f"Wrote baseline table and frozen reference to {run_dir}")
 
 
