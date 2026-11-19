@@ -1,0 +1,14 @@
+{
+  "n_snapshots": 59054,
+  "sampling_plus_forward_2048_s": 13.388513104000594,
+  "full_inference_mean_s": 404.8383567446629,
+  "full_inference_std_s": 1.1890070792713676,
+  "timing_includes_sampling": true,
+  "batch_size": 256,
+  "device": "cuda",
+  "amp_enabled": false,
+  "n_parameters": 21633,
+  "k_hops": 2,
+  "fan_out": 10,
+  "sampling_is_inference_path": true
+}

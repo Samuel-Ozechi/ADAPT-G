@@ -1,0 +1,3 @@
+{"ts": "2026-11-19T10:59:44.333451+00:00", "level": "INFO", "logger": "adapt_g.ag009", "msg": "starting chunked snapshot training", "run_id": "gnn-2026-11-19-105931-e3398d", "ticket": "AG-009"}
+{"ts": "2026-11-19T10:59:44.408381+00:00", "level": "INFO", "logger": "adapt_g.ag009", "msg": "AMP: False  device: cuda"}
+{"ts": "2026-11-19T15:12:34.280541+00:00", "level": "INFO", "logger": "adapt_g.ag009", "msg": "GNN baseline complete", "run_id": "gnn-2026-11-19-105931-e3398d", "seed": 42}

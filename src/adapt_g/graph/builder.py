@@ -111,12 +111,12 @@ def _aggregate_edges(df: pd.DataFrame, cfg: GraphConfig) -> list[EntityEdge]:
                 _node(kind, v) for v in group[col].dropna().tolist() if _node(kind, v) is not None
             ]
             uniq_vals = sorted(set(vals), key=lambda x: str(x))
-            for left, right in zip(uniq_vals, uniq_vals[1:]):
-                pass
             for i, left in enumerate(uniq_vals):
                 for right in uniq_vals[i + 1:]:
                     key = tuple(sorted((left, right)))
-                    bucket = pair_seen.setdefault(key, {"first": float("inf"), "last": float("-inf"), "count": 0})
+                    if key not in pair_seen:
+                        pair_seen[key] = {"first": float("inf"), "last": float("-inf"), "count": 0}
+                    bucket = pair_seen[key]
                     bucket["first"] = min(bucket["first"], float(dt))
                     bucket["last"] = max(bucket["last"], float(dt))
                     bucket["count"] = int(bucket["count"]) + 1

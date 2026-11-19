@@ -32,10 +32,35 @@ class _SageLayer(nn.Module):
         self.norm = nn.LayerNorm(hidden_dim)
 
     def forward(self, h: torch.Tensor, adj_mean: torch.Tensor) -> torch.Tensor:
-        # h: (N, H); adj_mean: (N, H) = mean of neighbours (or h_i for isolated).
         out = self.w_self(h) + self.w_nbr(adj_mean)
         out = self.norm(torch.relu(self.drop(out)))
         return out
+
+
+def _mean_aggregate(h: torch.Tensor, adj_index: torch.Tensor) -> torch.Tensor:
+    """Compute mean neighbour embedding for each node in each graph.
+
+    h: (B, N, H) node embeddings.
+    adj_index: (B, N, max_deg) with -1 for padding.
+
+    Returns (B, N, H) mean neighbour embeddings.
+    """
+    B, N, H = h.shape
+    max_deg = adj_index.size(-1)
+
+    # Flatten batch+node dims so we can use a single index_select.
+    h_flat = h.reshape(B * N, H)  # (B*N, H)
+    valid = (adj_index >= 0)  # (B, N, max_deg)
+    safe_idx = adj_index.clamp(min=0)  # (B, N, max_deg)
+
+    # Add batch offset so each graph's node indices map to disjoint rows.
+    offsets = torch.arange(B, device=h.device).unsqueeze(1).unsqueeze(2) * N
+    global_idx = safe_idx + offsets  # (B, N, max_deg)
+
+    neigh_h = h_flat[global_idx]  # (B, N, max_deg, H)
+    neigh_h = neigh_h * valid.unsqueeze(-1).float()
+    denom = valid.sum(dim=2).clamp(min=1.0).unsqueeze(-1)  # (B, N, 1)
+    return neigh_h.sum(dim=2) / denom
 
 
 class GraphSAGE(nn.Module):
@@ -63,21 +88,12 @@ class GraphSAGE(nn.Module):
         B, N, _ = X.shape
         h = self.input_proj(X)  # (B, N, H)
         for layer in self.layers:
-            # Gather neighbour embeddings: adj_index (B, N, max_deg).
-            # Mask -1 -> 0 by adding a zero row per batch.
-            safe = adj_index.clamp(min=0)
-            neigh = torch.gather(
-                h.unsqueeze(2).expand(-1, -1, safe.size(-1), -1),
-                1,
-                safe.unsqueeze(-1).expand(-1, -1, -1, h.size(-1)),
-            )  # (B, N, max_deg, H)
-            valid = (adj_index >= 0).unsqueeze(-1).float()  # (B, N, max_deg, 1)
-            denom = valid.sum(dim=2).clamp(min=1.0)
-            adj_mean = (neigh * valid).sum(dim=2) / denom  # (B, N, H)
-            # For nodes with no neighbours, adj_mean is zero; combine with self.
+            adj_mean = _mean_aggregate(h, adj_index)
             h = layer(h, adj_mean)
-        # Root embedding.
-        root_h = torch.gather(h, 1, root_index.unsqueeze(1).unsqueeze(2).expand(-1, 1, h.size(-1))).squeeze(1)
+        # Root embedding via batched index_select.
+        h_flat = h.reshape(B * N, -1)
+        offsets = torch.arange(B, device=h.device) * N
+        root_h = h_flat[root_index + offsets]  # (B, H)
         return self.head(root_h).squeeze(-1)
 
     def n_parameters(self) -> int:

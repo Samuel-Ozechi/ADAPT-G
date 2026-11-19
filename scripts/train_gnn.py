@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import queue
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -54,24 +57,43 @@ def _synthetic_fixture(n: int = 800, seed: int = 0):
     return txn, ident
 
 
+def _sample_snapshot(row, build, sampler_cfg, time_col, label_col):
+    card = row["card1"] if pd.notna(row["card1"]) else None
+    sg = sample_neighbourhood(build, card_id=card,
+                              dt_t=float(row[time_col]), cfg=sampler_cfg,
+                              adjacency=None)
+    label = int(row[label_col]) if label_col and label_col in row.index else None
+    return (sg, float(row[time_col]), label)
+
+
 def _make_snapshots(
     df: pd.DataFrame,
     build,
     sampler_cfg: SamplerConfig,
     time_col: str,
     label_col: str | None,
-    adjacency,
+    adjacency=None,
 ) -> list[tuple]:
-    """Return list of (sg, dt_t, label_or_None) in df row order."""
     out = []
-    for _, row in df.iterrows():
-        card = row["card1"] if pd.notna(row["card1"]) else None
+    cols = df.columns
+    time_vals = df[time_col].values
+    label_vals = df[label_col].values if label_col else None
+    card_vals = df["card1"].values if "card1" in df.columns else np.full(len(df), np.nan)
+    for i in range(len(df)):
+        card = card_vals[i] if pd.notna(card_vals[i]) else None
         sg = sample_neighbourhood(build, card_id=card,
-                                  dt_t=float(row[time_col]), cfg=sampler_cfg,
+                                  dt_t=float(time_vals[i]), cfg=sampler_cfg,
                                   adjacency=adjacency)
-        label = int(row[label_col]) if label_col and label_col in row else None
-        out.append((sg, float(row[time_col]), label))
+        label = int(label_vals[i]) if label_vals is not None else None
+        out.append((sg, float(time_vals[i]), label))
     return out
+
+
+def _predict_sampled(batch, model, device, amp_enabled, scaler):
+    with torch.amp.autocast("cuda", enabled=amp_enabled):
+        logits = model(batch.X.to(device), batch.adj_index.to(device),
+                       batch.root_index.to(device))
+    return logits
 
 
 def _predict(
@@ -84,12 +106,13 @@ def _predict(
     label_col: str,
     batch_size: int,
     device: str,
+    amp_enabled: bool = False,
 ):
-    """Predict in bounded-memory chunks and return snapshot connectivity flags."""
     model.eval()
     scores = np.zeros(len(df), dtype=np.float32)
     isolated = np.zeros(len(df), dtype=bool)
     node_counts = np.zeros(len(df), dtype=np.int16)
+    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
     with torch.no_grad():
         for i in range(0, len(df), batch_size):
             end = min(i + batch_size, len(df))
@@ -97,12 +120,68 @@ def _predict(
                 df.iloc[i:end], build, sampler_cfg, time_col, label_col, adjacency
             )
             batch = collate_snapshots(snapshots, k_hops=sampler_cfg.k_hops)
-            logits = model(batch.X.to(device), batch.adj_index.to(device),
-                           batch.root_index.to(device))
+            with torch.amp.autocast("cuda", enabled=amp_enabled):
+                logits = model(batch.X.to(device), batch.adj_index.to(device),
+                               batch.root_index.to(device))
             scores[i:end] = torch.sigmoid(logits).cpu().numpy()
             isolated[i:end] = [sg.is_isolated for sg, _, _ in snapshots]
             node_counts[i:end] = [len(sg.nodes) for sg, _, _ in snapshots]
     return scores, isolated, node_counts
+
+
+class _PrefetchLoader:
+    """Background thread samples upcoming batches while GPU computes."""
+
+    def __init__(self, df, build, sampler_cfg, adjacency, time_col, label_col,
+                 batch_size, prefetch_depth=2):
+        self.df = df
+        self.build = build
+        self.sampler_cfg = sampler_cfg
+        self.adjacency = adjacency
+        self.time_col = time_col
+        self.label_col = label_col
+        self.batch_size = batch_size
+        self._q = queue.Queue(maxsize=prefetch_depth)
+        self._stop = threading.Event()
+        self._error = None
+
+    def _worker(self, idx):
+        try:
+            for batch_start in range(0, len(self.df), self.batch_size):
+                if self._stop.is_set():
+                    break
+                end = min(batch_start + self.batch_size, len(self.df))
+                rows = self.df.iloc[batch_start:end]
+                snapshots = _make_snapshots(
+                    rows, self.build, self.sampler_cfg,
+                    self.time_col, self.label_col, self.adjacency,
+                )
+                batch = collate_snapshots(snapshots, k_hops=self.sampler_cfg.k_hops)
+                self._q.put((batch_start, batch, snapshots))
+            self._q.put(None)  # sentinel
+        except Exception as e:
+            self._q.put(e)
+
+    def __iter__(self):
+        self._thread = threading.Thread(target=self._worker, args=(0,), daemon=True)
+        self._thread.start()
+        return self
+
+    def __next__(self):
+        item = self._q.get()
+        if item is None:
+            raise StopIteration
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    def close(self):
+        self._stop.set()
+        while not self._q.empty():
+            try:
+                self._q.get_nowait()
+            except queue.Empty:
+                break
 
 
 def _train(
@@ -118,34 +197,41 @@ def _train(
     batch_size: int,
     lr: float,
     pos_weight: torch.Tensor,
+    amp_enabled: bool = False,
 ):
-    """Sample and train one batch at a time instead of retaining all snapshots."""
     model.to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=lr)
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
     n = len(df)
-    idx = np.arange(n)
     for ep in range(epochs):
         model.train()
+        idx = np.arange(n)
         np.random.shuffle(idx)
+        total_loss = 0.0
+        n_batches = 0
         for i in range(0, n, batch_size):
             rows = df.iloc[idx[i:i + batch_size]]
             snapshots = _make_snapshots(
                 rows, build, sampler_cfg, time_col, label_col, adjacency
             )
             batch = collate_snapshots(snapshots, k_hops=sampler_cfg.k_hops)
-            logits = model(batch.X.to(device), batch.adj_index.to(device),
-                           batch.root_index.to(device))
-            loss = loss_fn(logits, batch.y.to(device))
+            with torch.amp.autocast("cuda", enabled=amp_enabled):
+                logits = model(batch.X.to(device), batch.adj_index.to(device),
+                               batch.root_index.to(device))
+                loss = loss_fn(logits, batch.y.to(device))
             opt.zero_grad()
-            loss.backward()
-            opt.step()
-        print(f"Completed GNN epoch {ep + 1}/{epochs}")
+            scaler.scale(loss).backward()
+            scaler.step(opt)
+            scaler.update()
+            total_loss += loss.item()
+            n_batches += 1
+        avg_loss = total_loss / max(n_batches, 1)
+        print(f"Completed GNN epoch {ep + 1}/{epochs}  avg_loss={avg_loss:.6f}")
 
 
 def _connectivity_analysis(isolated, node_counts, scores, labels, threshold,
                            sampler_cfg):
-    """Bucket by snapshot size and report precision/recall at threshold."""
     bucket_masks = {
         "isolated": isolated,
         "sparse": (~isolated) & (node_counts < 20),
@@ -158,11 +244,11 @@ def _connectivity_analysis(isolated, node_counts, scores, labels, threshold,
             out["buckets"][name] = {"n": 0}
             continue
         s = scores[mask]
-        y = labels[mask]
+        y_vals = labels[mask]
         pred = (s >= threshold).astype(int)
-        tp = int(((pred == 1) & (y == 1)).sum())
-        fp = int(((pred == 1) & (y == 0)).sum())
-        fn = int(((pred == 0) & (y == 1)).sum())
+        tp = int(((pred == 1) & (y_vals == 1)).sum())
+        fp = int(((pred == 1) & (y_vals == 0)).sum())
+        fn = int(((pred == 0) & (y_vals == 1)).sum())
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
         out["buckets"][name] = {"n": int(mask.sum()), "precision": precision,
@@ -171,18 +257,18 @@ def _connectivity_analysis(isolated, node_counts, scores, labels, threshold,
 
 
 def _cost_report(df, build, batch_size, device, model, sampler_cfg,
-                 adjacency, time_col, label_col):
+                 adjacency, time_col, label_col, amp_enabled):
     model.eval()
     t0 = time.perf_counter()
     _predict(model, df.iloc[:2048], build, sampler_cfg, adjacency,
-             time_col, label_col, batch_size, device)
+             time_col, label_col, batch_size, device, amp_enabled)
     sampling_plus_forward_time = time.perf_counter() - t0
 
     times = []
     for _ in range(3):
         t0 = time.perf_counter()
         _predict(model, df, build, sampler_cfg, adjacency,
-                 time_col, label_col, batch_size, device)
+                 time_col, label_col, batch_size, device, amp_enabled)
         times.append(time.perf_counter() - t0)
     mean_lat = float(np.mean(times))
     return {
@@ -193,6 +279,7 @@ def _cost_report(df, build, batch_size, device, model, sampler_cfg,
         "timing_includes_sampling": True,
         "batch_size": batch_size,
         "device": device,
+        "amp_enabled": amp_enabled,
         "n_parameters": model.n_parameters(),
         "k_hops": sampler_cfg.k_hops, "fan_out": sampler_cfg.fan_out,
     }
@@ -208,6 +295,8 @@ def _load_cli_config(argv: list[str] | None = None) -> tuple[dict, argparse.Name
     ap.add_argument("--epochs", type=int, default=5)
     ap.add_argument("--batch-size", type=int, default=256)
     ap.add_argument("--lr", type=float, default=1e-3)
+    ap.add_argument("--amp", action="store_true", default=False,
+                    help="Enable automatic mixed precision (fp16)")
     args = ap.parse_args(argv)
 
     config_paths = args.config or ["configs/base.yaml"]
@@ -224,6 +313,7 @@ def main() -> None:
     logger = get_logger("adapt_g.ag009", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    amp_enabled = args.amp and device == "cuda"
 
     dcfg = cfg["data"]
     data_dir = Path(cfg["paths"]["data_raw"])
@@ -239,7 +329,7 @@ def main() -> None:
     ident = load_identity(
             data_dir, dcfg["identity_file"], usecols=identity_cols
         )
-    
+
 
     df = join_identity(txn, ident, dcfg["id_column"])
     del txn, ident
@@ -272,21 +362,23 @@ def main() -> None:
     pos_weight = torch.tensor([neg / max(pos, 1)], dtype=torch.float, device=device)
 
     model = GraphSAGE(GNNConfig()).to(device)
+    logger.info(f"AMP: {amp_enabled}  device: {device}")
     _train(model, train, build, sampler_cfg, adjacency,
            dcfg["time_column"], dcfg["target_column"], device,
-           args.epochs, args.batch_size, args.lr, pos_weight)
+           args.epochs, args.batch_size, args.lr, pos_weight,
+           amp_enabled=amp_enabled)
 
     s_tr, _, _ = _predict(
         model, train, build, sampler_cfg, adjacency, dcfg["time_column"],
-        dcfg["target_column"], args.batch_size, device,
+        dcfg["target_column"], args.batch_size, device, amp_enabled,
     )
     s_va, _, _ = _predict(
         model, val, build, sampler_cfg, adjacency, dcfg["time_column"],
-        dcfg["target_column"], args.batch_size, device,
+        dcfg["target_column"], args.batch_size, device, amp_enabled,
     )
     s_te, test_isolated, test_node_counts = _predict(
         model, test, build, sampler_cfg, adjacency, dcfg["time_column"],
-        dcfg["target_column"], args.batch_size, device,
+        dcfg["target_column"], args.batch_size, device, amp_enabled,
     )
 
     preds_dir = run_dir / "preds" / "gnn"
@@ -317,7 +409,7 @@ def main() -> None:
     # Cost report.
     cost = _cost_report(
         test, build, args.batch_size, device, model, sampler_cfg, adjacency,
-        dcfg["time_column"], dcfg["target_column"],
+        dcfg["time_column"], dcfg["target_column"], amp_enabled,
     )
     cost["sampling_is_inference_path"] = True
     (run_dir / "gnn_cost_report.json").write_text(json.dumps(cost, indent=2))
@@ -330,6 +422,7 @@ def main() -> None:
         "epochs": args.epochs, "batch_size": args.batch_size, "lr": args.lr,
         "pos_weight": float(pos_weight.item()),
         "device": device,
+        "amp_enabled": amp_enabled,
         "sampler": {"k_hops": sampler_cfg.k_hops, "fan_out": sampler_cfg.fan_out},
     }
     (run_dir / "frozen_gnn_reference.json").write_text(json.dumps(frozen, indent=2))

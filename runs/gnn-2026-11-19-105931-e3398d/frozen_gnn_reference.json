@@ -1,0 +1,26 @@
+{
+  "synthetic_fixture": false,
+  "bounds": {
+    "train_max_dt": 12192842.0,
+    "val_max_dt": 13990904.0,
+    "train_q": 0.8,
+    "val_q": 0.9,
+    "n_train": 472432,
+    "n_val": 59054,
+    "n_test": 59054,
+    "train_fraud_rate": 0.03513521522674162,
+    "val_fraud_rate": 0.03134419345006265,
+    "test_fraud_rate": 0.03747417617773563
+  },
+  "n_parameters": 21633,
+  "epochs": 5,
+  "batch_size": 256,
+  "lr": 0.001,
+  "pos_weight": 27.46147346496582,
+  "device": "cuda",
+  "amp_enabled": false,
+  "sampler": {
+    "k_hops": 2,
+    "fan_out": 10
+  }
+}

@@ -32,13 +32,6 @@ KIND_TO_ONEHOT: dict[str, int] = {
 NODE_FEATURE_DIM = 7  # 6 one-hot + recency
 
 
-def _node_kind(node_id: str) -> NodeKind:
-    if node_id == "__ISOLATED__":
-        return NodeKind.ISOLATED
-    prefix = node_id.split(":", 1)[0]
-    return NodeKind(KIND_TO_ONEHOT.get(prefix, NodeKind.UNKNOWN))
-
-
 def encode_snapshot_nodes(
     sg: SampledSubgraph,
     dt_t: float,
@@ -54,12 +47,22 @@ def encode_snapshot_nodes(
     """
     n = len(sg.nodes)
     X = np.zeros((n, node_feature_dim), dtype=np.float32)
+    if sg.node_kinds:
+        kinds = np.array(sg.node_kinds, dtype=np.int32)
+        X[np.arange(n), kinds] = 1.0
+    else:
+        # Fallback: compute kinds from node ids.
+        for i, nid in enumerate(sg.nodes):
+            if nid == "__ISOLATED__":
+                X[i, NodeKind.ISOLATED] = 1.0
+            else:
+                prefix = nid.split(":", 1)[0]
+                kind = KIND_TO_ONEHOT.get(prefix, NodeKind.UNKNOWN)
+                X[i, int(kind)] = 1.0
+
+    last_active = sg.node_last_active
     for i, nid in enumerate(sg.nodes):
-        kind = _node_kind(nid)
-        X[i, int(kind)] = 1.0
-        last = sg.node_last_active.get(nid, -1.0)
-        if last < 0:
-            X[i, 6] = 0.0
-        else:
+        last = last_active.get(nid, -1.0)
+        if last >= 0:
             X[i, 6] = float(np.log1p(max(0.0, dt_t - last)))
     return X
