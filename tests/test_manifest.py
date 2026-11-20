@@ -7,6 +7,19 @@ def test_new_run_id_accepts_evaluation_tag():
     assert new_run_id("evaluation").startswith("evaluation-")
 
 
+def test_new_run_id_accepts_descriptive_custom_tag():
+    assert new_run_id("eval-lightgbm-top5pct").startswith(
+        "eval-lightgbm-top5pct-"
+    )
+
+
+def test_new_run_id_rejects_invalid_custom_tag():
+    import pytest
+
+    with pytest.raises(ValueError, match="invalid run tag"):
+        new_run_id("Eval lightgbm")
+
+
 def test_manifest_fields(tmp_path):
     cfg = {"data": {"transaction_file": "x.csv"}, "project": {"seed": 42}}
     path = write_manifest(

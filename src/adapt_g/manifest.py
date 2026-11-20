@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import uuid
 from datetime import datetime, timezone
@@ -12,9 +13,12 @@ from adapt_g.config import config_hash
 
 
 VALID_TAGS = {
+    # Standard component and workflow tags. Custom tags may also be used
+    # when they match RUN_TAG_PATTERN.
     "baseline", "transformer", "gnn", "evaluation", "unified",
     "ablation", "graph", "smoke",
 }
+RUN_TAG_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
 def git_commit() -> str:
@@ -29,12 +33,14 @@ def git_commit() -> str:
 def new_run_id(tag: str) -> str:
     """Return '<tag>-<YYYY-MM-DD>-<HHMMSS>-<short_hash>'.
 
-    Tag must be one of VALID_TAGS; raises ValueError otherwise.
-    This keeps run IDs self-describing and consistent.
+    Standard tags are listed in VALID_TAGS. Custom tags are allowed if they
+    start with a lowercase letter and contain only lowercase letters, digits,
+    and hyphens; invalid tags raise ValueError.
     """
-    if tag not in VALID_TAGS:
+    if not isinstance(tag, str) or not RUN_TAG_PATTERN.fullmatch(tag):
         raise ValueError(
-            f"unknown tag {tag!r}; expected one of {sorted(VALID_TAGS)}"
+            f"invalid run tag {tag!r}; use lowercase letters, digits, and "
+            "hyphens, starting with a letter"
         )
     now = datetime.now(timezone.utc)
     stamp = now.strftime("%Y-%m-%d-%H%M%S")

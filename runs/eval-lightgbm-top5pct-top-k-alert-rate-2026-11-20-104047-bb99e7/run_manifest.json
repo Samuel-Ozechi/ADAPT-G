@@ -1,8 +1,8 @@
 {
-  "run_id": "evaluation-2026-11-20-095826-c4a4e3",
-  "tag": "evaluation",
-  "created_utc": "2026-11-20T10:00:02.155306+00:00",
-  "git_commit": "6758554c8a40aa4830d30f01206ff2ee62358b89",
+  "run_id": "eval-lightgbm-top5pct-top-k-alert-rate-2026-11-20-104047-bb99e7",
+  "tag": "eval-lightgbm-top5pct-top-k-alert-rate",
+  "created_utc": "2026-11-20T10:41:30.212319+00:00",
+  "git_commit": "2cfc16f613024ab9965eef193ab402f3f3cce14f",
   "config_hash": "340f0ab99b581b53",
   "config": {
     "project": {
@@ -33,9 +33,9 @@
   "split_boundaries": null,
   "synthetic_fixture": false,
   "extra": {
-    "tag": "evaluation",
+    "tag": "eval-lightgbm-top5pct-top-k-alert-rate",
     "ticket": "AG-005",
-    "model": "gnn_top5pct",
+    "model": "lightgbm-top5pct",
     "threshold_rule": "top_k_alert_rate"
   }
 }

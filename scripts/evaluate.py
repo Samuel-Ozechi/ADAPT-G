@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,11 @@ def _load(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
     s = df["y_score"].to_numpy()
     u = df["y_uncertainty"].to_numpy() if "y_uncertainty" in df.columns else None
     return y, s, u
+
+
+def _slug(value: str) -> str:
+    """Normalize a CLI label into a safe, lowercase run-tag component."""
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
 def main() -> None:
@@ -58,7 +64,10 @@ def main() -> None:
     config_paths.extend(args.extra_config)
     cfg = load_config(*config_paths)
     set_seed(int(cfg["project"]["seed"]))
-    run_id = new_run_id("evaluation")
+    model_tag = _slug(args.model_name) or "model"
+    rule_tag = _slug(args.threshold_rule) or "rule"
+    tag = f"eval-{model_tag}-{rule_tag}"
+    run_id = new_run_id(tag)
     run_dir = Path(cfg["paths"]["runs"]) / run_id
     logger = get_logger("adapt_g.evaluate", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
@@ -85,7 +94,7 @@ def main() -> None:
         run_dir=run_dir, cfg=cfg,
         dataset_version=None,
         split_boundaries=None,
-        extra={"tag": "evaluation", "ticket": "AG-005", "model": args.model_name,
+        extra={"tag": tag, "ticket": "AG-005", "model": args.model_name,
                "threshold_rule": args.threshold_rule},
     )
     logger.info(f"evaluation complete: {json_path}", extra={"run_id": run_id})

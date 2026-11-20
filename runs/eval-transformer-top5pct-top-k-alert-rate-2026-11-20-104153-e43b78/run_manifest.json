@@ -1,0 +1,41 @@
+{
+  "run_id": "eval-transformer-top5pct-top-k-alert-rate-2026-11-20-104153-e43b78",
+  "tag": "eval-transformer-top5pct-top-k-alert-rate",
+  "created_utc": "2026-11-20T10:42:35.952138+00:00",
+  "git_commit": "2cfc16f613024ab9965eef193ab402f3f3cce14f",
+  "config_hash": "340f0ab99b581b53",
+  "config": {
+    "project": {
+      "name": "adapt-g",
+      "seed": 42
+    },
+    "paths": {
+      "data_raw": "data/raw/ieee_cis",
+      "runs": "runs"
+    },
+    "logging": {
+      "level": "INFO",
+      "json": true
+    },
+    "data": {
+      "transaction_file": "train_transaction.csv",
+      "identity_file": "train_identity.csv",
+      "id_column": "TransactionID",
+      "target_column": "isFraud",
+      "time_column": "TransactionDT"
+    },
+    "split": {
+      "train_end_q": 0.8,
+      "val_end_q": 0.9
+    }
+  },
+  "dataset_version": null,
+  "split_boundaries": null,
+  "synthetic_fixture": false,
+  "extra": {
+    "tag": "eval-transformer-top5pct-top-k-alert-rate",
+    "ticket": "AG-005",
+    "model": "transformer-top5pct",
+    "threshold_rule": "top_k_alert_rate"
+  }
+}

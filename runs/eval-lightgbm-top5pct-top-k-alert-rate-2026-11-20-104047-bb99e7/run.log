@@ -1,0 +1,1 @@
+{"ts": "2026-11-20T10:41:30.314808+00:00", "level": "INFO", "logger": "adapt_g.evaluate", "msg": "evaluation complete: runs/eval-lightgbm-top5pct-top-k-alert-rate-2026-11-20-104047-bb99e7/evaluation_report.json", "run_id": "eval-lightgbm-top5pct-top-k-alert-rate-2026-11-20-104047-bb99e7"}

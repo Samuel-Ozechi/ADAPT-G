@@ -1,0 +1,1 @@
+{"ts": "2026-11-20T10:42:36.054529+00:00", "level": "INFO", "logger": "adapt_g.evaluate", "msg": "evaluation complete: runs/eval-transformer-top5pct-top-k-alert-rate-2026-11-20-104153-e43b78/evaluation_report.json", "run_id": "eval-transformer-top5pct-top-k-alert-rate-2026-11-20-104153-e43b78"}
