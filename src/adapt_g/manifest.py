@@ -12,7 +12,7 @@ from adapt_g.config import config_hash
 
 
 VALID_TAGS = {
-    "baseline", "transformer", "gnn", "unified",
+    "baseline", "transformer", "gnn", "evaluation", "unified",
     "ablation", "graph", "smoke",
 }
 

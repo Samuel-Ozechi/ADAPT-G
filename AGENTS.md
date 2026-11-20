@@ -50,7 +50,7 @@ Configs are YAML files deep-merged in order: later `--config` values override ea
 
 ## Important conventions
 
-- **Run IDs** use `new_run_id(tag)` → `"<tag>-<YYYY-MM-DD>-<HHMMSS>-<shorthex>"`. Valid tags: `baseline`, `transformer`, `gnn`, `unified`, `ablation`, `graph`, `smoke`. Non-valid tags raise `ValueError`.
+- **Run IDs** use `new_run_id(tag)` → `"<tag>-<YYYY-MM-DD>-<HHMMSS>-<shorthex>"`. Valid tags: `baseline`, `transformer`, `gnn`, `evaluation`, `unified`, `ablation`, `graph`, `smoke`. Non-valid tags raise `ValueError`.
 - **Chronological splits** use quantile boundaries on `TransactionDT` (not random). Defaults: train [0, 0.8), val [0.8, 0.9), test [0.9, 1.0].
 - **numpy<2** is pinned in `pyproject.toml`. Many upstream libraries may not yet support numpy 2.
 - **Evaluation reports** are written as JSON + Markdown pairs. Report structure: train/val/test metrics + threshold selection + bootstrap CIs.

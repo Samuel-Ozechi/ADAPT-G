@@ -19,9 +19,10 @@ def build_report(
     threshold_rule: str = "max_f1",
     uncertainty_test: np.ndarray | None = None,
     model_name: str = "model",
+    alert_rate: float | None = None,
 ) -> dict[str, Any]:
     """Select threshold on validation; score validation and test; compute CIs."""
-    sel = select_threshold(y_val, s_val, rule=threshold_rule)
+    sel = select_threshold(y_val, s_val, rule=threshold_rule, alert_rate=alert_rate)
     t = sel["threshold"]
 
     val_metrics = full_metrics(y_val, s_val, t)

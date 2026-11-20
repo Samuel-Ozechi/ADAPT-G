@@ -1,6 +1,10 @@
 import json
 
-from adapt_g.manifest import write_manifest
+from adapt_g.manifest import new_run_id, write_manifest
+
+
+def test_new_run_id_accepts_evaluation_tag():
+    assert new_run_id("evaluation").startswith("evaluation-")
 
 
 def test_manifest_fields(tmp_path):

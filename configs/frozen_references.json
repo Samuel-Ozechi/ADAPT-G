@@ -14,5 +14,13 @@
     "preds_dir": "runs/transformer-2026-11-13-131620-b6fb3a/preds",
     "evaluation_dir": "runs/transformer-2026-11-13-131620-b6fb3a/evaluation",
     "config": "runs/transformer-2026-11-13-131620-b6fb3a/frozen_temporal_reference.json"
+  },
+  "gnn": {
+    "run_id": "gnn-2026-11-19-105931-e3398d",
+    "tag": "gnn",
+    "ticket": "AG-009",
+    "preds_dir": "runs/gnn-2026-11-19-105931-e3398d/preds",
+    "evaluation_dir": "runs/gnn-2026-11-19-105931-e3398d/evaluation",
+    "config": "runs/gnn-2026-11-19-105931-e3398d/frozen_gnn_reference.json"
   }
 }

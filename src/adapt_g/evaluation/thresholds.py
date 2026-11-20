@@ -10,6 +10,7 @@ def select_threshold(
     rule: str = "max_f1",
     fixed_recall: float = 0.8,
     fixed_fpr: float = 0.05,
+    alert_rate: float | None = None,
 ) -> dict:
     """Return a dict with chosen threshold and the rule used.
 
@@ -19,6 +20,8 @@ def select_threshold(
       precision; ties use the highest threshold.
     - recall_at_fpr: among thresholds with FPR <= fixed_fpr, maximize precision;
       ties use the highest threshold.
+    - top_k_alert_rate: choose the validation score quantile corresponding to
+      the requested alert rate.
     """
     y_val = np.asarray(y_val)
     s_val = np.asarray(s_val, dtype=float)
@@ -32,6 +35,14 @@ def select_threshold(
         raise ValueError("Validation scores must be probabilities in [0, 1]")
     if not np.isin(y_val, [0, 1]).all():
         raise ValueError("Validation labels must be binary 0/1")
+
+    if rule == "top_k_alert_rate":
+        if alert_rate is None:
+            raise ValueError("alert_rate required for top_k_alert_rate")
+        if not np.isfinite(alert_rate) or not 0.0 <= alert_rate <= 1.0:
+            raise ValueError("alert_rate must be in [0, 1]")
+        threshold = float(np.quantile(s_val, 1.0 - alert_rate))
+        return {"rule": rule, "threshold": threshold, "alert_rate": alert_rate}
 
     # Predictions only change at a score value; include a threshold above the
     # maximum score to represent predicting no positives.

@@ -1,12 +1,11 @@
 """Standard evaluation command (AG-005).
 
 Inputs: predictions CSVs with columns TransactionID, y_true, y_score,
-optionally y_uncertainty. One file per fold: train/val/test.
+optionally y_uncertainty. Validation and test files are required; train is optional.
 
 Usage:
   python scripts/evaluate.py \
     --config configs/base.yaml \
-    --train-preds runs/<id>/train_preds.csv \
     --val-preds   runs/<id>/val_preds.csv \
     --test-preds  runs/<id>/test_preds.csv \
     --model-name  tabular_baseline
@@ -41,23 +40,34 @@ def main() -> None:
         help="YAML config to load; repeat to deep-merge configs in order",
     )
     ap.add_argument("--extra-config", action="append", default=[])
-    ap.add_argument("--train-preds", required=True)
+    ap.add_argument(
+        "--train-preds", default=None,
+        help="Optional training predictions CSV (not used in report metrics)",
+    )
     ap.add_argument("--val-preds", required=True)
     ap.add_argument("--test-preds", required=True)
     ap.add_argument("--model-name", default="model")
     ap.add_argument("--threshold-rule", default="max_f1")
+    ap.add_argument(
+        "--alert-rate", type=float, default=None,
+        help="Target validation alert fraction for top_k_alert_rate (e.g. 0.05)",
+    )
     args = ap.parse_args()
 
     config_paths = args.config or ["configs/base.yaml"]
     config_paths.extend(args.extra_config)
     cfg = load_config(*config_paths)
     set_seed(int(cfg["project"]["seed"]))
-    run_id = new_run_id()
+    run_id = new_run_id("evaluation")
     run_dir = Path(cfg["paths"]["runs"]) / run_id
     logger = get_logger("adapt_g.evaluate", run_dir / "run.log",
                         cfg["logging"]["level"], cfg["logging"]["json"])
 
-    y_tr, s_tr, _ = _load(Path(args.train_preds))
+    if args.train_preds:
+        y_tr, s_tr, _ = _load(Path(args.train_preds))
+    else:
+        y_tr = np.empty(0, dtype=int)
+        s_tr = np.empty(0, dtype=float)
     y_va, s_va, _ = _load(Path(args.val_preds))
     y_te, s_te, u_te = _load(Path(args.test_preds))
 
@@ -68,13 +78,14 @@ def main() -> None:
         threshold_rule=args.threshold_rule,
         uncertainty_test=u_te,
         model_name=args.model_name,
+        alert_rate=args.alert_rate,
     )
     json_path, md_path = write_report(report, run_dir)
     write_manifest(
         run_dir=run_dir, cfg=cfg,
         dataset_version=None,
         split_boundaries=None,
-        extra={"ticket": "AG-005", "model": args.model_name,
+        extra={"tag": "evaluation", "ticket": "AG-005", "model": args.model_name,
                "threshold_rule": args.threshold_rule},
     )
     logger.info(f"evaluation complete: {json_path}", extra={"run_id": run_id})

@@ -36,16 +36,18 @@ def main() -> None:
             f"refusing to freeze synthetic run {args.run_id}; "
             "rerun on real data"
         )
-    if manifest.get("tag") != COMPONENT_TO_TAG[args.component]:
+    expected_tag = COMPONENT_TO_TAG[args.component]
+    run_tag = manifest.get("tag")
+    if not isinstance(run_tag, str) or run_tag.casefold() != expected_tag.casefold():
         raise SystemExit(
-            f"tag mismatch: run has tag {manifest.get('tag')!r}, "
-            f"expected {COMPONENT_TO_TAG[args.component]!r}"
+            f"tag mismatch: run has tag {run_tag!r}, "
+            f"expected {expected_tag!r}"
         )
 
     out = Path(args.out)
     data = json.loads(out.read_text()) if out.exists() else {}
     data.setdefault(args.component, {})["run_id"] = args.run_id
-    data[args.component]["tag"] = manifest["tag"]
+    data[args.component]["tag"] = expected_tag
     data[args.component]["ticket"] = manifest.get("extra", {}).get("ticket")
     data[args.component]["preds_dir"] = str(run_dir / "preds")
     data[args.component]["evaluation_dir"] = str(run_dir / "evaluation")

@@ -63,6 +63,31 @@ def test_threshold_max_f1_deterministic():
     assert t1["rule"] == "max_f1"
 
 
+def test_threshold_top_k_alert_rate_uses_validation_quantile():
+    y = np.array([0, 1] * 10)
+    s = np.linspace(0.05, 1.0, len(y))
+    alert_rate = 0.25
+
+    out = select_threshold(y, s, rule="top_k_alert_rate", alert_rate=alert_rate)
+
+    assert out["rule"] == "top_k_alert_rate"
+    assert out["threshold"] == float(np.quantile(s, 1.0 - alert_rate))
+    assert out["alert_rate"] == alert_rate
+    assert np.count_nonzero(s >= out["threshold"]) >= alert_rate * len(s)
+
+
+def test_threshold_top_k_alert_rate_requires_valid_rate():
+    y = np.array([0, 1])
+    s = np.array([0.2, 0.8])
+
+    with pytest.raises(ValueError, match="alert_rate required"):
+        select_threshold(y, s, rule="top_k_alert_rate")
+    with pytest.raises(ValueError, match=r"alert_rate must be in \[0, 1\]"):
+        select_threshold(y, s, rule="top_k_alert_rate", alert_rate=1.1)
+    with pytest.raises(ValueError, match=r"alert_rate must be in \[0, 1\]"):
+        select_threshold(y, s, rule="top_k_alert_rate", alert_rate=np.nan)
+
+
 def test_threshold_precision_at_recall():
     y = np.array([0, 0, 1, 1, 1, 0]); s = np.array([0.1, 0.3, 0.6, 0.7, 0.8, 0.9])
     out = select_threshold(y, s, rule="precision_at_recall", fixed_recall=0.66)
@@ -117,3 +142,15 @@ def test_build_report_uses_validation_threshold():
     assert report["notes"]["threshold_source"] == "validation_only"
     assert report["notes"]["test_scored_once"] is True
     assert "pr_auc" in report["test_bootstrap_ci"]
+
+
+def test_build_report_passes_alert_rate_to_threshold_selector():
+    y = np.array([0, 1] * 15)
+    s = np.linspace(0.02, 0.98, len(y))
+    report = build_report(
+        y, s, y, s, y, s,
+        threshold_rule="top_k_alert_rate", alert_rate=0.2,
+    )
+
+    assert report["threshold_selection"]["rule"] == "top_k_alert_rate"
+    assert report["threshold_selection"]["alert_rate"] == 0.2

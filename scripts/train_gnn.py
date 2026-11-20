@@ -432,7 +432,7 @@ def main() -> None:
         run_dir=run_dir, cfg=cfg,
         dataset_version=f"ieee_cis@{dcfg['transaction_file']}",
         split_boundaries=bounds.__dict__,
-        extra={"tag": "GNN", "models": ["gnn"], "ticket": "AG-009"},
+        extra={"tag": "gnn", "models": ["gnn"], "ticket": "AG-009"},
     )
     logger.info("GNN baseline complete", extra={"run_id": run_id, "run": "gnn baseline", "seed": int(cfg["project"]["seed"])})
     print(f"Wrote GNN reference and reports to {run_dir}")
