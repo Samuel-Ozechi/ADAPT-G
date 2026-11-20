@@ -3,24 +3,27 @@
     "run_id": "baseline-2026-11-13-104140-4a00ae",
     "tag": "baseline",
     "ticket": "AG-006",
-    "preds_dir": "runs/baseline-2026-11-13-104140-4a00ae/preds",
+    "preds_dir": "runs/baseline-2026-11-13-104140-4a00ae/preds/lightgbm",
     "evaluation_dir": "runs/baseline-2026-11-13-104140-4a00ae/evaluation",
-    "config": "runs/baseline-2026-11-13-104140-4a00ae/frozen_reference.json"
+    "config": "runs/baseline-2026-11-13-104140-4a00ae/frozen_reference.json",
+    "evaluation_top5pct": "runs/eval-lightgbm-top5pct-top-k-alert-rate-2026-11-20-104047-bb99e7"
   },
   "transformer": {
     "run_id": "transformer-2026-11-13-131620-b6fb3a",
     "tag": "transformer",
     "ticket": "AG-007",
-    "preds_dir": "runs/transformer-2026-11-13-131620-b6fb3a/preds",
+    "preds_dir": "runs/transformer-2026-11-13-131620-b6fb3a/preds/temporal",
     "evaluation_dir": "runs/transformer-2026-11-13-131620-b6fb3a/evaluation",
-    "config": "runs/transformer-2026-11-13-131620-b6fb3a/frozen_temporal_reference.json"
+    "config": "runs/transformer-2026-11-13-131620-b6fb3a/frozen_temporal_reference.json",
+    "evaluation_top5pct": "runs/eval-transformer-top5pct-top-k-alert-rate-2026-11-20-104153-e43b78"
   },
   "gnn": {
     "run_id": "gnn-2026-11-19-105931-e3398d",
     "tag": "gnn",
     "ticket": "AG-009",
-    "preds_dir": "runs/gnn-2026-11-19-105931-e3398d/preds",
+    "preds_dir": "runs/gnn-2026-11-19-105931-e3398d/preds/gnn",
     "evaluation_dir": "runs/gnn-2026-11-19-105931-e3398d/evaluation",
-    "config": "runs/gnn-2026-11-19-105931-e3398d/frozen_gnn_reference.json"
+    "config": "runs/gnn-2026-11-19-105931-e3398d/frozen_gnn_reference.json",
+    "evaluation_top5pct": "runs/eval-gnn-top5pct-top-k-alert-rate-2026-11-20-104407-e35089"
   }
 }

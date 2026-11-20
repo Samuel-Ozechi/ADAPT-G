@@ -1,0 +1,2 @@
+{"ts": "2026-11-20T10:57:27.583516+00:00", "level": "INFO", "logger": "adapt_g.cache", "msg": "caching fold train (472432 rows)", "event": "cache_start", "extra": {"fold": "train"}}
+{"ts": "2026-11-20T11:01:35.500868+00:00", "level": "INFO", "logger": "adapt_g.cache", "msg": "caching fold train (472432 rows)", "event": "cache_start", "extra": {"fold": "train"}}

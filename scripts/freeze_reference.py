@@ -17,6 +17,48 @@ COMPONENT_TO_TAG = {
     "transformer": "transformer",
     "gnn": "gnn",
 }
+COMPONENT_TO_PREDS_MODEL = {
+    "baseline": "lightgbm",
+    "transformer": "temporal",
+    "gnn": "gnn",
+}
+COMPONENT_TO_EVAL_MODELS = {
+    "baseline": {"lightgbm", "lightgbm-top5pct"},
+    "transformer": {"temporal", "transformer", "transformer-top5pct"},
+    "gnn": {"gnn", "gnn-top5pct"},
+}
+
+
+def find_top5pct_evaluation(component: str, runs_dir: Path = Path("runs")) -> str | None:
+    """Return the newest matching 5% top-k evaluation report directory, if any."""
+    expected_models = COMPONENT_TO_EVAL_MODELS[component]
+    candidates: list[tuple[str, Path]] = []
+    for candidate_dir in runs_dir.iterdir():
+        manifest_path = candidate_dir / "run_manifest.json"
+        report_path = candidate_dir / "evaluation_report.json"
+        if not candidate_dir.is_dir() or not manifest_path.is_file() or not report_path.is_file():
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text())
+            report = json.loads(report_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        extra = manifest.get("extra", {}) or {}
+        selection = report.get("threshold_selection", {}) or {}
+        model_name = str(extra.get("model", "")).lower().replace("_", "-")
+        alert_rate = selection.get("alert_rate")
+        if (
+            model_name in expected_models
+            and extra.get("threshold_rule") == "top_k_alert_rate"
+            and selection.get("rule") == "top_k_alert_rate"
+            and isinstance(alert_rate, (int, float))
+            and abs(alert_rate - 0.05) < 1e-9
+        ):
+            candidates.append((str(manifest.get("created_utc", "")), candidate_dir))
+    if not candidates:
+        return None
+    _, latest_dir = max(candidates, key=lambda item: item[0])
+    return str(latest_dir)
 
 
 def main() -> None:
@@ -49,8 +91,15 @@ def main() -> None:
     data.setdefault(args.component, {})["run_id"] = args.run_id
     data[args.component]["tag"] = expected_tag
     data[args.component]["ticket"] = manifest.get("extra", {}).get("ticket")
-    data[args.component]["preds_dir"] = str(run_dir / "preds")
+    data[args.component]["preds_dir"] = str(
+        run_dir / "preds" / COMPONENT_TO_PREDS_MODEL[args.component]
+    )
     data[args.component]["evaluation_dir"] = str(run_dir / "evaluation")
+    top5pct_evaluation = find_top5pct_evaluation(args.component)
+    if top5pct_evaluation is not None:
+        data[args.component]["evaluation_top5pct"] = top5pct_evaluation
+    else:
+        data[args.component].pop("evaluation_top5pct", None)
 
     if args.component == "baseline":
         data[args.component]["config"] = str(run_dir / "frozen_reference.json")
