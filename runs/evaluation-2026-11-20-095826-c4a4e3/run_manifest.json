@@ -1,0 +1,41 @@
+{
+  "run_id": "evaluation-2026-11-20-095826-c4a4e3",
+  "tag": "evaluation",
+  "created_utc": "2026-11-20T10:00:02.155306+00:00",
+  "git_commit": "6758554c8a40aa4830d30f01206ff2ee62358b89",
+  "config_hash": "340f0ab99b581b53",
+  "config": {
+    "project": {
+      "name": "adapt-g",
+      "seed": 42
+    },
+    "paths": {
+      "data_raw": "data/raw/ieee_cis",
+      "runs": "runs"
+    },
+    "logging": {
+      "level": "INFO",
+      "json": true
+    },
+    "data": {
+      "transaction_file": "train_transaction.csv",
+      "identity_file": "train_identity.csv",
+      "id_column": "TransactionID",
+      "target_column": "isFraud",
+      "time_column": "TransactionDT"
+    },
+    "split": {
+      "train_end_q": 0.8,
+      "val_end_q": 0.9
+    }
+  },
+  "dataset_version": null,
+  "split_boundaries": null,
+  "synthetic_fixture": false,
+  "extra": {
+    "tag": "evaluation",
+    "ticket": "AG-005",
+    "model": "gnn_top5pct",
+    "threshold_rule": "top_k_alert_rate"
+  }
+}
